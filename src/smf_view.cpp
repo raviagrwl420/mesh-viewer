@@ -62,6 +62,52 @@ void myGlutDisplay(void) {
 
 	glColor3f(1.0, 1.0, 0.0);
 
+	if (displayType == FLAT_SHADED || displayType == SHADED_WITH_EDGES) {
+		glShadeModel(GL_FLAT);
+		glEnable(GL_NORMALIZE);
+		glBegin(GL_TRIANGLES);
+		
+		Vertex* vertices[3];
+		for (int i = 1; i <= numFaces; i++) {
+			Face* f = faceMap[i];
+			getAllVerticesForFace(f, vertices);
+
+			map<string, Vector*>::iterator it = faceNormalMap.find(getFaceNormalKey(i, vertices[0]));
+
+			if (it != faceNormalMap.end()) {
+				Vector *faceNormal = it->second;
+				glNormal3f(faceNormal->x, faceNormal->y, faceNormal->z);
+			} else {
+				cout << "Error Flat" << endl;
+			}
+
+			glVertex3f(vertices[0]->x, vertices[0]->y, vertices[0]->z);
+			glVertex3f(vertices[1]->x, vertices[1]->y, vertices[1]->z);
+			glVertex3f(vertices[2]->x, vertices[2]->y, vertices[2]->z);
+		}
+
+		glEnd();
+	}
+
+	if (displayType == SMOOTH_SHADED) {
+		glShadeModel(GL_SMOOTH);
+		glBegin(GL_TRIANGLES);
+		
+		Vertex* vertices[3];
+		for (int i = 1; i <= numFaces; i++) {
+			Face* f = faceMap[i];
+			getAllVerticesForFace(f, vertices);
+
+			for (int j = 0; j < 3; j++) {
+				Vector *normal = getVertexNormal(vertices[j]);
+				glNormal3f(normal->x, normal->y, normal->z);
+				glVertex3f(vertices[j]->x, vertices[j]->y, vertices[j]->z);
+			}
+		}
+
+		glEnd();
+	}
+
 	if (displayType == WIREFRAME) {
 		glBegin(GL_LINES);
 		for (map<string, W_edge*>::const_iterator it = edgeMap.begin(); it != edgeMap.end(); it++) {

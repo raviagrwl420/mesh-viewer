@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <map>
 #include <string>
+#include <math.h>
 
 using std::cout;
 using std::cin;
@@ -45,6 +46,12 @@ struct Face {
 	Face (W_edge *edge) : edge(edge) {};
 };
 
+struct Vector {
+	float x, y, z;
+	Vector () {};
+	Vector (float x, float y, float z) : x(x), y(y), z(z) {};
+};
+
 // Global Variables
 extern int numVertices, numFaces;
 extern map<string, W_edge*> edgeMap;
@@ -52,5 +59,11 @@ extern map<int, Vertex*> vertexMap;
 extern map<int, Face*> faceMap;
 extern map<Vertex*, int> vertexIndexMap;
 
+extern map<string, Vector*> faceNormalMap;
+extern map<Vertex*, Vector*> vertexNormalMap;
+
+Vector *getVertexNormal(Vertex*);
+string getFaceNormalKey(int, Vertex*);
+void getAllVerticesForFace(Face*, Vertex**);
 void writeSmfFile(string);
 void displaySMF(string);
