@@ -174,7 +174,7 @@ void updateVertexNormal(int faceId, Vertex *v1, Vertex *v2, Vertex *v3) {
 		Vector *scalar_multiplied = normalized->scalar_mult(asin(sin_alpha));
 
 		vertexNormal = *vertexNormal + *scalar_multiplied;
-		v1->normal = vertexNormal;
+		v1->normal = vertexNormal->normalize();
 	}
 
 }

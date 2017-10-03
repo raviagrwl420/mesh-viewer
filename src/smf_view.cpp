@@ -118,6 +118,18 @@ void myGlutDisplay(void) {
 		glEnd();
 	}
 
+	if(displayType == SHADED_WITH_EDGES)
+	{
+		glPolygonOffset(1.0, 1.0);
+		glBegin(GL_LINES);
+		for (map<string, W_edge*>::const_iterator it = edgeMap.begin(); it != edgeMap.end(); it++) {
+			W_edge *edge = it->second;
+			glVertex3f(edge->start->x, edge->start->y, edge->start->z);
+			glVertex3f(edge->end->x, edge->end->y, edge->end->z);
+		}
+		glEnd();
+	}
+
 	glutSwapBuffers();
 }
 
