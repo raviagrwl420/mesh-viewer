@@ -1,3 +1,4 @@
+#include <vector.h>
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
@@ -10,14 +11,14 @@ using std::cin;
 using std::cerr;
 using std::endl;
 
+using std::ifstream;
+using std::ofstream;
+
 using std::string;
 using std::to_string;
 
 using std::map;
 using std::make_pair;
-
-using std::ifstream;
-using std::ofstream;
 
 // Winged Edge
 struct W_edge {
@@ -34,22 +35,20 @@ struct W_edge {
 struct Vertex {
 	float x, y, z;
 	struct W_edge *edge;
-	Vertex () {};
-	Vertex (float x, float y, float z) : x(x), y(y), z(z) {};
+	struct Vector *normal;
+	Vertex () {
+		this->normal = NULL;
+	};
+	Vertex (float x, float y, float z) : x(x), y(y), z(z) {
+		this->normal = NULL;
+	};
 };
 
 // Face
 struct Face {
-	int a, b, c;
 	struct W_edge *edge;
 	Face () {};
 	Face (W_edge *edge) : edge(edge) {};
-};
-
-struct Vector {
-	float x, y, z;
-	Vector () {};
-	Vector (float x, float y, float z) : x(x), y(y), z(z) {};
 };
 
 // Global Variables

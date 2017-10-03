@@ -19,7 +19,7 @@ SOURCES := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
 
 # Flags
-CPPFLAGS := -std=c++11 -w -I $(IDIR) 
+CPPFLAGS := -std=c++11 -Wall -w -I $(IDIR) 
 
 # Libraries
 LIB := -lGL -lglut -lglui

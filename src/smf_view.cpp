@@ -99,7 +99,7 @@ void myGlutDisplay(void) {
 			getAllVerticesForFace(f, vertices);
 
 			for (int j = 0; j < 3; j++) {
-				Vector *normal = getVertexNormal(vertices[j]);
+				Vector *normal = vertices[j]->normal;
 				glNormal3f(normal->x, normal->y, normal->z);
 				glVertex3f(vertices[j]->x, vertices[j]->y, vertices[j]->z);
 			}

@@ -7,9 +7,8 @@ map<int, Vertex*> vertexMap;
 map<int, Face*> faceMap;
 map<Vertex*, int> vertexIndexMap;
 map<string, Vector*> faceNormalMap;
-map<Vertex*, Vector*> vertexNormalMap;
 
-// Compute Edge Key
+// Compute Key To Store Edge In edgeMap
 string getEdgeKey (int v1, int v2) {
 	if (v1 < v2)
 		return to_string(v1) + "|" + to_string(v2);
@@ -17,20 +16,7 @@ string getEdgeKey (int v1, int v2) {
 		return to_string(v2) + "|" + to_string(v1);
 }
 
-string getFaceNormalKey (int faceId, Vertex *v) {
-	return to_string(faceId) + "|" + to_string(v->x) + "|" + to_string(v->y) + "|" + to_string(v->z); 
-}
-
-Vector *getVertexNormal(Vertex *v) {
-	map<Vertex*, Vector*>::iterator it = vertexNormalMap.find(v);
-
-	if (it != vertexNormalMap.end())
-		return it->second;
-	else
-		return NULL;
-}
-
-// Check If Edge Exists
+// Fetch Edge From Map
 W_edge *getEdge (int v1, int v2) {	
 	map<string, W_edge*>::iterator it = edgeMap.find(getEdgeKey(v1, v2));
 	
@@ -58,6 +44,11 @@ Face *createFaceAndInsert(W_edge *edge, int count) {
 	faceMap.insert(make_pair(count, face));
 
 	return face;
+}
+
+// Compute Key To Store Face Normal In faceNormalMap
+string getFaceNormalKey (int faceId, Vertex *v) {
+	return to_string(faceId) + "|" + to_string(v->x) + "|" + to_string(v->y) + "|" + to_string(v->z); 
 }
 
 // Consume A Face And Create Edges And Faces With Appropriate References
@@ -136,58 +127,56 @@ void consumeFace (int v1, int v2, int v3, int count) {
 	}
 }
 
-Vector *faceNormalFromVertexUnnormalized(Face *f, Vertex *v1, Vertex *v2, Vertex *v3) {
-	float x = ((v2->y - v1->y)*(v3->z - v1->z)) - ((v2->z - v1->z)*(v3->y - v1->y));
-	float y = ((v3->x - v1->x)*(v2->z - v1->z)) - ((v3->z - v1->z)*(v2->x - v1->x));
-	float z = ((v2->x - v1->x)*(v3->y - v1->y)) - ((v2->y - v1->y)*(v3->x - v1->x));
+Vector getVectorForVertex(Vertex *v) {
+	return Vector(v->x, v->y, v->z);
+};
 
-	return new Vector(x, y, z);
+Vector *faceNormalFromVertexUnnormalized(Face *f, Vertex *v1, Vertex *v2, Vertex *v3) {
+	Vector vec1 = getVectorForVertex(v1);
+	Vector vec2 = getVectorForVertex(v2);
+	Vector vec3 = getVectorForVertex(v3);
+
+	Vector *e1 = vec2 - vec1;
+	Vector *e2 = vec3 - vec1;
+
+	return cross(*e1, *e2);
 }
 
 void updateVertexNormal(int faceId, Vertex *v1, Vertex *v2, Vertex *v3) {
-	Vector *vertexNormal;
+	// Vector *vertexNormal;
 	Vector *faceNormal;
-	map<Vertex*, Vector*>::iterator it = vertexNormalMap.find(v1);
 
-	if (it != vertexNormalMap.end()) {
-		vertexNormal = it->second;
-	} else {
-		vertexNormal = new Vector(0.0, 0.0, 0.0);
-		vertexNormalMap.insert(make_pair(v1, vertexNormal));
+	if (v1->normal == NULL) {
+		v1->normal = new Vector(0.0, 0.0, 0.0);
 	}
+
+	Vector *vertexNormal = v1->normal;
 
 	map<string, Vector*>::iterator it2 = faceNormalMap.find(getFaceNormalKey(faceId, v1));
 
 	if (it2 != faceNormalMap.end()) {
 		faceNormal = it2->second;
-		float normalLength = sqrtf((faceNormal->x * faceNormal->x) + (faceNormal->y * faceNormal->y) + (faceNormal->z * faceNormal->z));
+		float normalLength = faceNormal->length();
 
-		float vector1X = v2->x - v1->x;
-		float vector1Y = v2->y - v1->y;
-		float vector1Z = v2->z - v1->z;
+		Vector vec1 = getVectorForVertex(v1);
+		Vector vec2 = getVectorForVertex(v2);
+		Vector vec3 = getVectorForVertex(v3);
+
+		Vector *e1 = vec2 - vec1;
+		Vector *e2 = vec3 - vec1;
 		
-		float vector2X = v3->x - v1->x;
-		float vector2Y = v3->y - v1->y;
-		float vector2Z = v3->z - v1->z;
-		
-		float vector1Length = sqrtf((vector1X * vector1X) + (vector1Y * vector1Y) + (vector1Z * vector1Z));
-		float vector2Length = sqrtf((vector2X * vector2X) + (vector2Y * vector2Y) + (vector2Z * vector2Z));
+		float vector1Length = e1->length();
+		float vector2Length = e2->length();
 
 		float sin_alpha = normalLength/(vector1Length*vector2Length);
 
-		float normalX = faceNormal->x/normalLength;
-		float normalY = faceNormal->y/normalLength;
-		float normalZ = faceNormal->z/normalLength;
+		Vector *normalized = faceNormal->normalize();
+		Vector *scalar_multiplied = normalized->scalar_mult(asin(sin_alpha));
 
-		normalX = normalX * asin(sin_alpha);
-		normalY = normalY * asin(sin_alpha);
-		normalZ = normalZ * asin(sin_alpha);
-
-		//updating the entry in vertexNormal
-		vertexNormal->x = vertexNormal->x + normalX;
-		vertexNormal->y = vertexNormal->y + normalY;
-		vertexNormal->z = vertexNormal->z + normalZ;
+		vertexNormal = *vertexNormal + *scalar_multiplied;
+		v1->normal = vertexNormal;
 	}
+
 }
 
 void getAllEdgesForFace(Face *f, W_edge *edges[3]) {
@@ -288,25 +277,6 @@ void parseSmfFile(string filename) {
 		updateVertexNormal(i, vertices[0], vertices[1], vertices[2]);
 		updateVertexNormal(i, vertices[1], vertices[2], vertices[0]);
 		updateVertexNormal(i, vertices[2], vertices[0], vertices[1]);
-		// W_edge *faceEdgeArray[3];
-		// getAllEdgesForFace(faceMap[i], faceEdgeArray);
-
-		// W_edge *edge1 = faceEdgeArray[0];
-	
-		// W_edge *edge2 = faceEdgeArray[1];
-
-		// if(edge1->start == edge2->start || edge1->end == edge2->start)
-		// {
-		// 	updateVertexNormal(i, edge1->start, edge1->end, edge2->end);
-		// 	updateVertexNormal(i, edge1->end, edge2->end, edge1->start);
-		// 	updateVertexNormal(i, edge2->end, edge1->start, edge1->end);
-		// }
-		// else
-		// {	
-		// 	updateVertexNormal(i, edge1->start, edge1->end, edge2->start);
-		// 	updateVertexNormal(i, edge1->end, edge2->start, edge1->start);
-		// 	updateVertexNormal(i, edge2->start, edge1->start, edge1->end);
-		// }
 	};
 	
 	smf_file.close();
