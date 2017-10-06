@@ -1,3 +1,6 @@
+#ifndef VECTOR_H
+#define VECTOR_H
+
 #include <math.h>
 
 struct Vector {
@@ -28,3 +31,5 @@ struct Vector {
 };
 
 Vector* cross (const Vector&, const Vector&);
+
+#endif
