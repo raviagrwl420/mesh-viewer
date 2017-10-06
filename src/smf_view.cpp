@@ -6,7 +6,9 @@
 #include <string>
 #include <array>
 
-using namespace std;
+using std::runtime_error;
+using std::shared_ptr;
+using std::array;
 
 #define WIDTH 800
 #define HEIGHT 600
@@ -99,7 +101,7 @@ void myGlutDisplay(void) {
 			getAllVerticesForFace(f, vertices);
 
 			for (int j = 0; j < 3; j++) {
-				Vector *normal = vertices[j]->normal;
+				Vector *normal = (vertices[j]->normal)->normalize();
 				glNormal3f(normal->x, normal->y, normal->z);
 				glVertex3f(vertices[j]->x, vertices[j]->y, vertices[j]->z);
 			}

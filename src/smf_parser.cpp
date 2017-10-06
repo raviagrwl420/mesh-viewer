@@ -143,7 +143,6 @@ Vector *faceNormalFromVertexUnnormalized(Face *f, Vertex *v1, Vertex *v2, Vertex
 }
 
 void updateVertexNormal(int faceId, Vertex *v1, Vertex *v2, Vertex *v3) {
-	// Vector *vertexNormal;
 	Vector *faceNormal;
 
 	if (v1->normal == NULL) {
@@ -156,27 +155,9 @@ void updateVertexNormal(int faceId, Vertex *v1, Vertex *v2, Vertex *v3) {
 
 	if (it2 != faceNormalMap.end()) {
 		faceNormal = it2->second;
-		float normalLength = faceNormal->length();
-
-		Vector vec1 = getVectorForVertex(v1);
-		Vector vec2 = getVectorForVertex(v2);
-		Vector vec3 = getVectorForVertex(v3);
-
-		Vector *e1 = vec2 - vec1;
-		Vector *e2 = vec3 - vec1;
-		
-		float vector1Length = e1->length();
-		float vector2Length = e2->length();
-
-		float sin_alpha = normalLength/(vector1Length*vector2Length);
-
-		Vector *normalized = faceNormal->normalize();
-		Vector *scalar_multiplied = normalized->scalar_mult(asin(sin_alpha));
-
-		vertexNormal = *vertexNormal + *scalar_multiplied;
-		v1->normal = vertexNormal->normalize();
+		vertexNormal = *vertexNormal + *faceNormal;
+		v1->normal = vertexNormal;
 	}
-
 }
 
 void getAllEdgesForFace(Face *f, W_edge *edges[3]) {
