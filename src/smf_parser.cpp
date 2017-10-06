@@ -214,6 +214,9 @@ void parseSmfFile(string filename) {
 	char type;
 	int v = 1, f = 1;
 
+	// Read first line for number of vertices and faces
+	smf_file >> type >> numVertices >> numFaces;
+
 	// Read Data
 	while (smf_file >> type) {
 		float x, y, z;
@@ -221,18 +224,22 @@ void parseSmfFile(string filename) {
 		string line;
 		
 		switch (type) {
-			case '#':
-				if (!numVertices && !numFaces)
-					smf_file >> numVertices >> numFaces;
-				else 
-					getline(smf_file, line);
+			case '#': {
+				// Ignore comments
+				getline(smf_file, line); 
 				break;
-			case 'v':
+			}
+
+			case 'v': {
 				smf_file >> x >> y >> z;
-				vertexMap.insert(make_pair(v, new Vertex(x, y, z)));
+				Vertex *vertex = new Vertex(x, y, z);
+				vertexMap.insert(make_pair(v, vertex));
+				vertexIndexMap.insert(make_pair(vertex, v));
 				v++;
 				break;
-			case 'f':
+			}
+
+			case 'f': {
 				smf_file >> v1 >> v2 >> v3;
 				consumeFace(v1, v2, v3, f);
 
@@ -249,6 +256,7 @@ void parseSmfFile(string filename) {
 
 				f++;
 				break;
+			}
 		}
 	}
 
@@ -276,13 +284,14 @@ void writeSmfFile(string filename) {
 	
 	for (int i = 1; i <= numVertices; i++) {
 		Vertex *vertex = vertexMap[i];
-		vertexIndexMap.insert(make_pair(vertex, i));
-
 		smf_file << "v " << vertex->x << " " << vertex->y << " " << vertex->z << endl;
 	}
 
 	for (int i = 1; i <= numFaces; i++) {
-		// TODO: Add Faces to SMF	
+		Face *face = faceMap[i];
+		Vertex *vertices[3];
+		getAllVerticesForFace(face, vertices);
+		smf_file << "f " << vertexIndexMap[vertices[0]] << " " << vertexIndexMap[vertices[1]] << " " << vertexIndexMap[vertices[2]] << endl;
 	}
 	
 	smf_file.close();
