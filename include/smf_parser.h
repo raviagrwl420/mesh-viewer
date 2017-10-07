@@ -16,7 +16,7 @@ using std::ofstream;
 
 extern Mesh *mesh;
 
+void parseSmfFile(string);
 void writeSmfFile(string);
-void displaySMF(string);
 
 #endif

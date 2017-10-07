@@ -68,7 +68,3 @@ void writeSmfFile (string filename) {
 	
 	smf_file.close();
 }
-
-void displaySMF(string smf_filename) {
-	parseSmfFile(smf_filename);
-}

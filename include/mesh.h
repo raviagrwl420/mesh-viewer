@@ -49,6 +49,7 @@ struct Mesh {
 	map<Vertex*, int> vertexIndexMap;
 	map<Face*, int> faceIndexMap;
 	map<string, Vector*> faceNormalMap;
+	float xMin, yMin, zMin, xMax, yMax, zMax;
 
 	Mesh (int numVertices, int numFaces) : numVertices(numVertices), numFaces(numFaces) {};
 
@@ -71,8 +72,10 @@ struct Mesh {
 	Vector *getFaceNormal (Face *f);
 
 	void getAllEdgesForFace (Face *f, W_edge *edges[3]);
-	
+
 	void getAllVerticesForFace (Face *f, Vertex *vertices[3]);
+
+	void computeBoundingBox ();
 };
 
 string getEdgeKey (int v1, int v2);

@@ -7,7 +7,37 @@ Vertex::Vertex (float x, float y, float z) {
 	this->z = z;
 	this->vector = new Vector(x, y, z);
 	this->normal = new Vector(0.0, 0.0, 0.0);
-};
+}
+
+void Mesh::computeBoundingBox () {
+	xMin = xMax = vertexMap[1]->x;
+	yMin = yMax = vertexMap[1]->y;
+	zMin = zMax = vertexMap[1]->z;
+
+	for (int i = 1; i <= numVertices; i++) {
+		float xVal = vertexMap[i]->x;
+		float yVal = vertexMap[i]->y;
+		float zVal = vertexMap[i]->z;
+		
+		if (xVal < xMin)
+			xMin = xVal;
+		
+		if (xVal > xMax)
+			xMax = xVal;
+
+		if (yVal < yMin)
+			yMin = yVal;
+		
+		if (yVal > yMax)
+			yMax = yVal;
+
+		if (zVal < zMin)
+			zMin = zVal;
+		
+		if (zVal > zMax)
+			zMax = zVal;
+	}
+}
 
 // Insert a vertex in the mesh
 Vertex *Mesh::insertVertex (float x, float y, float z) {
@@ -19,7 +49,7 @@ Vertex *Mesh::insertVertex (float x, float y, float z) {
 	vertexIndexMap.insert(make_pair(vertex, index));
 
 	return vertex;
-};
+}
 
 // Insert an edge in the mesh
 W_edge *Mesh::insertEdge (int v1, int v2) {

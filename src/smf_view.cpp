@@ -138,7 +138,7 @@ void glutDisplay (void) {
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glFrustum(-xy_aspect*0.08, xy_aspect*0.08, -0.08, 0.08, 0.1, 100.0);
+	glFrustum(-xy_aspect*0.08, xy_aspect*0.08, -0.08, 0.08, 0.1, 500.0);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -168,6 +168,14 @@ string exec(const char* cmd) {
     return result;
 }
 
+void initMesh (string smf_filename) {
+	parseSmfFile(smf_filename);
+	mesh->computeBoundingBox();
+	obj_pos[0] = -(mesh->xMin + mesh->xMax) / 2;
+	obj_pos[1] = -(mesh->yMin + mesh->yMax) / 2;
+	obj_pos[2] = 1.5 * (mesh->zMin - mesh->zMax);
+}
+
 // GLUI control callback
 void control_cb(int control) {
 	switch (control) {
@@ -177,7 +185,7 @@ void control_cb(int control) {
 			// Remove the newline character at the end
 			inputFilePath = inputFilePath.substr(0, inputFilePath.size() - 1);
 			if (inputFilePath.size() != 0)
-				displaySMF(inputFilePath);
+				initMesh(inputFilePath);
 			break;
 		}
 
