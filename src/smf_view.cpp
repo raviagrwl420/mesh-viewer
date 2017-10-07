@@ -6,12 +6,12 @@
 #include <string>
 #include <array>
 
+#define WIDTH 800
+#define HEIGHT 600
+
 using std::runtime_error;
 using std::shared_ptr;
 using std::array;
-
-#define WIDTH 800
-#define HEIGHT 600
 
 enum DisplayType {FLAT_SHADED, SMOOTH_SHADED, WIREFRAME, SHADED_WITH_EDGES};
 enum Buttons {ROTATION, OPEN, SAVE, QUIT, RESET};
@@ -22,32 +22,117 @@ float rotationX = 0.0, rotationY = 0.0;
 
 // Live Variables
 int main_window;
-float scale = 1.0;
 int displayType = FLAT_SHADED;
-int wireframe = 0;
-int segments = 8;
+float scale = 1.0;
 float view_rotate[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
 float obj_pos[] = {0.0, 0.0, 0.0};
 
-void myGlutIdle(void) {
+// GLUT idle function
+void glutIdle (void) {
 	if (glutGetWindow() != main_window)
 		glutSetWindow(main_window);
+
 	glutPostRedisplay();
 }
 
-void myGlutReshape(int x, int y) {	
+// GLUT reshape function
+void glutReshape (int x, int y) {	
 	xy_aspect = (float) x / (float) y;
 	GLUI_Master.auto_set_viewport();
-	
-	// glMatrixMode(GL_PROJECTION);
-	// glLoadIdentity();
-	// glFrustum(-xy_aspect*0.08, xy_aspect*0.08, -0.08, 0.08, 0.1, 15.0);
 
 	glutPostRedisplay();
 }
 
+// Displays mesh as flat shaded
+void displayFlatShaded (void) {
+	glShadeModel(GL_FLAT);
+	glEnable(GL_NORMALIZE);
+	glBegin(GL_TRIANGLES);
+	
+	Face *f;
+	Vertex *vertices[3];
+	Vector *faceNormal;
 
-void myGlutDisplay(void) {
+	for (int i = 1; i <= mesh->numFaces; i++) {
+		f = mesh->faceMap[i];
+
+		faceNormal = mesh->getFaceNormal(f);
+		glNormal3f(faceNormal->x, faceNormal->y, faceNormal->z);
+
+		mesh->getAllVerticesForFace(f, vertices);
+		glVertex3f(vertices[0]->x, vertices[0]->y, vertices[0]->z);
+		glVertex3f(vertices[1]->x, vertices[1]->y, vertices[1]->z);
+		glVertex3f(vertices[2]->x, vertices[2]->y, vertices[2]->z);
+	}
+
+	glEnd();
+}
+
+// Displays mesh as smooth shaded
+void displaySmoothShaded (void) {
+	glShadeModel(GL_SMOOTH);
+	glEnable(GL_NORMALIZE);
+	glBegin(GL_TRIANGLES);
+	
+	Face *f;
+	Vertex *vertices[3];
+	Vector *vertexNormal;
+
+	for (int i = 1; i <= mesh->numFaces; i++) {
+		f = mesh->faceMap[i];
+
+		mesh->getAllVerticesForFace(f, vertices);
+
+		for (int j = 0; j < 3; j++) {
+			vertexNormal = vertices[j]->normal;
+			glNormal3f(vertexNormal->x, vertexNormal->y, vertexNormal->z);
+			glVertex3f(vertices[j]->x, vertices[j]->y, vertices[j]->z);
+		}
+	}
+
+	glEnd();
+}
+
+// Display mesh as wireframe
+void displayWireframe (void) {
+	glBegin(GL_LINES);
+
+	W_edge *edge;
+
+	for (map<string, W_edge*>::const_iterator it = mesh->edgeMap.begin(); it != mesh->edgeMap.end(); it++) {
+		edge = it->second;
+		glVertex3f(edge->start->x, edge->start->y, edge->start->z);
+		glVertex3f(edge->end->x, edge->end->y, edge->end->z);
+	}
+
+	glEnd();
+}
+
+// Display mesh function
+void displayMesh (void) {
+	if (mesh == NULL)
+		return;
+
+	switch (displayType) {
+		case FLAT_SHADED:
+			displayFlatShaded();
+			break;
+		case SMOOTH_SHADED:
+			displaySmoothShaded();
+			break;
+		case WIREFRAME:
+			displayWireframe();
+			break;
+		case SHADED_WITH_EDGES:
+			displayFlatShaded();
+			glPolygonOffset(1.0, 1.0);
+			displayWireframe();
+			break;
+	}
+}
+
+// GLUT display function
+void glutDisplay (void) {
 	glClearColor(0.9f, 0.9f, 0.9f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -58,80 +143,19 @@ void myGlutDisplay(void) {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	
+	// Handle transformations
 	glTranslatef(obj_pos[0], obj_pos[1], obj_pos[2]);
 	glScalef(scale, scale, scale);
 	glMultMatrixf(view_rotate);
 
 	glColor3f(1.0, 1.0, 0.0);
 
-	if (displayType == FLAT_SHADED || displayType == SHADED_WITH_EDGES) {
-		glShadeModel(GL_FLAT);
-		glEnable(GL_NORMALIZE);
-		glBegin(GL_TRIANGLES);
-		
-		if (mesh != NULL) {
-			Vertex* vertices[3];
-			for (int i = 1; i <= mesh->numFaces; i++) {
-				Face* f = mesh->faceMap[i];
-				mesh->getAllVerticesForFace(f, vertices);
-
-				Vector *faceNormal = mesh->getFaceNormal(f);
-
-				glNormal3f(faceNormal->x, faceNormal->y, faceNormal->z);
-
-				glVertex3f(vertices[0]->x, vertices[0]->y, vertices[0]->z);
-				glVertex3f(vertices[1]->x, vertices[1]->y, vertices[1]->z);
-				glVertex3f(vertices[2]->x, vertices[2]->y, vertices[2]->z);
-			}	
-		}
-
-		glEnd();
-	}
-
-	if (displayType == SMOOTH_SHADED) {
-		glShadeModel(GL_SMOOTH);
-		glBegin(GL_TRIANGLES);
-		
-		Vertex* vertices[3];
-		for (int i = 1; i <= mesh->numFaces; i++) {
-			Face* f = mesh->faceMap[i];
-			mesh->getAllVerticesForFace(f, vertices);
-
-			for (int j = 0; j < 3; j++) {
-				Vector *normal = (vertices[j]->normal)->normalize();
-				glNormal3f(normal->x, normal->y, normal->z);
-				glVertex3f(vertices[j]->x, vertices[j]->y, vertices[j]->z);
-			}
-		}
-
-		glEnd();
-	}
-
-	if (displayType == WIREFRAME) {
-		glBegin(GL_LINES);
-		for (map<string, W_edge*>::const_iterator it = mesh->edgeMap.begin(); it != mesh->edgeMap.end(); it++) {
-			W_edge *edge = it->second;
-			glVertex3f(edge->start->x, edge->start->y, edge->start->z);
-			glVertex3f(edge->end->x, edge->end->y, edge->end->z);
-		}
-		glEnd();
-	}
-
-	if(displayType == SHADED_WITH_EDGES)
-	{
-		glPolygonOffset(1.0, 1.0);
-		glBegin(GL_LINES);
-		for (map<string, W_edge*>::const_iterator it = mesh->edgeMap.begin(); it != mesh->edgeMap.end(); it++) {
-			W_edge *edge = it->second;
-			glVertex3f(edge->start->x, edge->start->y, edge->start->z);
-			glVertex3f(edge->end->x, edge->end->y, edge->end->z);
-		}
-		glEnd();
-	}
+	displayMesh();
 
 	glutSwapBuffers();
 }
 
+// Execute shell commands
 string exec(const char* cmd) {
     array<char, 128> buffer;
     string result;
@@ -144,7 +168,7 @@ string exec(const char* cmd) {
     return result;
 }
 
-// GLUI Control Callback
+// GLUI control callback
 void control_cb(int control) {
 	switch (control) {
 		case OPEN: {
@@ -173,24 +197,15 @@ void control_cb(int control) {
 	}
 };
 
-void pickDisplayType(int displayType) {
-
-}
-
 // Setup GLUI
 void setupGlui () {
-	// Initialize GLUI Subwindow
+	// Initialize GLUI subwindow
 	GLUI* glui = GLUI_Master.create_glui_subwindow(main_window, GLUI_SUBWINDOW_RIGHT);
 	
-	// Set Main GFX Window	
+	// Set main GFX window	
 	glui->set_main_gfx_window(main_window);
 	
 	// Setup UI
-	
-	// Add Heading
-	new GLUI_StaticText(glui, "SMF Viewer");
-	glui->add_separator();
-
 	// Add Panel "Display Options"
 	GLUI_Panel *displayOptionsPanel = glui->add_panel("Display Options");
 
@@ -237,9 +252,9 @@ int main(int argc, char* argv[]) {
 	main_window = glutCreateWindow("SMF View");
 
 	// Register Callbacks
-	glutDisplayFunc(myGlutDisplay);
-	GLUI_Master.set_glutReshapeFunc(myGlutReshape);
-	GLUI_Master.set_glutIdleFunc(myGlutIdle);
+	glutDisplayFunc(glutDisplay);
+	GLUI_Master.set_glutReshapeFunc(glutReshape);
+	GLUI_Master.set_glutIdleFunc(glutIdle);
 	
 	// Setup Lights
 	GLfloat light0_ambient[] = {0.1f, 0.1f, 0.3f, 1.0f};
