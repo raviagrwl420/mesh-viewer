@@ -163,20 +163,16 @@ Vector *Mesh::getFaceNormal (Face *f) {
 
 // Get all edges for a face
 void Mesh::getAllEdgesForFace (Face *f, W_edge *edges[3]) {
-	W_edge *edge1 = f->edge;
-	
-	W_edge *e = edge1;
-	int count = 0;
-	do {
-		edges[count] = e;
+	W_edge *e = f->edge;
+
+	for (int i = 0; i < 3; i++) {
+		edges[i] = e;
 
 		if (e->right == f)
 			e = e->right_prev;
-		else 
+		else
 			e = e->left_next;
-
-		count++;
-	} while (e != edge1);
+	}
 }
 
 // Get all vertices for a face
