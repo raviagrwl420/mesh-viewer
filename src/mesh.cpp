@@ -10,7 +10,7 @@ Vertex::Vertex (float x, float y, float z) {
 };
 
 // Insert a vertex in the mesh
-Vertex *Mesh::insertVertex(float x, float y, float z) {
+Vertex *Mesh::insertVertex (float x, float y, float z) {
 	Vertex *vertex = new Vertex(x, y, z);
 
 	int index = vertexMap.size() + 1;
@@ -22,7 +22,7 @@ Vertex *Mesh::insertVertex(float x, float y, float z) {
 };
 
 // Insert an edge in the mesh
-W_edge *Mesh::insertEdge(int v1, int v2) {
+W_edge *Mesh::insertEdge (int v1, int v2) {
 	W_edge *edge = new W_edge(vertexMap[v1], vertexMap[v2]);
 
 	edgeMap.insert(make_pair(getEdgeKey(v1, v2), edge));
@@ -31,7 +31,7 @@ W_edge *Mesh::insertEdge(int v1, int v2) {
 }
 
 // Insert a face in the mesh
-Face *Mesh::insertFace(W_edge *edge) {
+Face *Mesh::insertFace (W_edge *edge) {
 	Face *face = new Face(edge);
 
 	int index = faceMap.size() + 1;
@@ -40,16 +40,6 @@ Face *Mesh::insertFace(W_edge *edge) {
 	faceIndexMap.insert(make_pair(face, index));
 
 	return face;
-}
-
-// Fetch an edge
-W_edge *Mesh::getEdge (int v1, int v2) {	
-	map<string, W_edge*>::iterator it = edgeMap.find(getEdgeKey(v1, v2));
-	
-	if (it != edgeMap.end())
-		return it->second;
-	else
-		return NULL;
 }
 
 // Insert a triangle in the mesh
@@ -131,21 +121,49 @@ void Mesh::insertTriangle (int v1, int v2, int v3) {
 	updateVertexNormalForEachVertex(f, v1, v2, v3);
 }
 
-void Mesh::insertFaceNormalForVertex(Face *f, int v1, int v2, int v3) {
+// Insert the face normal for vertex v1
+void Mesh::insertFaceNormalForVertex (Face *f, int v1, int v2, int v3) {
 	Vector *faceNormal = getFaceNormalFromVertex(vertexMap[v1], vertexMap[v2], vertexMap[v3]);
 	faceNormalMap.insert(make_pair(getFaceNormalForVertexKey(f, vertexMap[v1]), faceNormal));
 }
 
-void Mesh::insertFaceNormalForEachVertex(Face *f, int v1, int v2, int v3) {
+// Insert the face normal for each vertex v1, v2, and v3
+void Mesh::insertFaceNormalForEachVertex (Face *f, int v1, int v2, int v3) {
 	insertFaceNormalForVertex(f, v1, v2, v3);
 	insertFaceNormalForVertex(f, v2, v3, v1);
 	insertFaceNormalForVertex(f, v3, v1, v2);
 }
 
+// Update the vertex normal for vertex v by adding the face normal
+void Mesh::updateVertexNormalForVertex (Face *f, int v) {
+	Vertex *vertex = vertexMap[v];
+	Vector *faceNormal = getFaceNormalForVertex(f, vertex);
+	vertex->normal = *(vertex->normal) + *faceNormal;
+}
+
+// Update the vertex normal for each vertex v1, v2, and v3
+void Mesh::updateVertexNormalForEachVertex (Face *f, int v1, int v2, int v3) {
+	updateVertexNormalForVertex(f, v1);
+	updateVertexNormalForVertex(f, v2);
+	updateVertexNormalForVertex(f, v3);	
+}
+
+// Fetch an edge between two vertices v1 and v2
+W_edge *Mesh::getEdge (int v1, int v2) {	
+	map<string, W_edge*>::iterator it = edgeMap.find(getEdgeKey(v1, v2));
+	
+	if (it != edgeMap.end())
+		return it->second;
+	else
+		return NULL;
+}
+
+// Compute the key to store the face normal for vertex in faceNormalMap
 string Mesh::getFaceNormalForVertexKey (Face *f, Vertex *v) {
 	return to_string(faceIndexMap[f]) + "|" + to_string(vertexIndexMap[v]); 
 }
 
+// Fetch the face normal for vertex
 Vector *Mesh::getFaceNormalForVertex (Face *f, Vertex *v) {
 	map<string, Vector*>::iterator it = faceNormalMap.find(getFaceNormalForVertexKey(f, v));
 
@@ -155,19 +173,8 @@ Vector *Mesh::getFaceNormalForVertex (Face *f, Vertex *v) {
 		return NULL;
 }
 
-void Mesh::updateVertexNormalForVertex(Face *f, int v) {
-	Vertex *vertex = vertexMap[v];
-	Vector *faceNormal = getFaceNormalForVertex(f, vertex);
-	vertex->normal = *(vertex->normal) + *faceNormal;
-}
-
-void Mesh::updateVertexNormalForEachVertex(Face *f, int v1, int v2, int v3) {
-	updateVertexNormalForVertex(f, v1);
-	updateVertexNormalForVertex(f, v2);
-	updateVertexNormalForVertex(f, v3);	
-}
-
-void Mesh::getAllEdgesForFace(Face *f, W_edge *edges[3]) {
+// Get all edges for a face
+void Mesh::getAllEdgesForFace (Face *f, W_edge *edges[3]) {
 	W_edge *edge1 = f->edge;
 	
 	W_edge *e = edge1;
@@ -184,7 +191,8 @@ void Mesh::getAllEdgesForFace(Face *f, W_edge *edges[3]) {
 	} while (e != edge1);
 }
 
-void Mesh::getAllVerticesForFace(Face *f, Vertex *vertices[3]) {
+// Get all vertices for a face
+void Mesh::getAllVerticesForFace (Face *f, Vertex *vertices[3]) {
 	W_edge *edge1 = f->edge;
 
 	if (edge1->right == f) {
@@ -208,7 +216,7 @@ void Mesh::getAllVerticesForFace(Face *f, Vertex *vertices[3]) {
 	}
 }
 
-// Compute Key To Store Edge In edgeMap
+// Compute the key to store the edge between vertices v1, and v2 in edgeMap
 string getEdgeKey (int v1, int v2) {
 	if (v1 < v2)
 		return to_string(v1) + "|" + to_string(v2);
@@ -216,11 +224,10 @@ string getEdgeKey (int v1, int v2) {
 		return to_string(v2) + "|" + to_string(v1);
 }
 
-// Get a face normal from the first vertex
-Vector *getFaceNormalFromVertex(Vertex *v1, Vertex *v2, Vertex *v3) {
+// Get the face normal from the first vertex
+Vector *getFaceNormalFromVertex (Vertex *v1, Vertex *v2, Vertex *v3) {
 	Vector *e1 = *v2->vector - *v1->vector;
 	Vector *e2 = *v3->vector - *v1->vector;
 
 	return cross(*e1, *e2);
 }
-
