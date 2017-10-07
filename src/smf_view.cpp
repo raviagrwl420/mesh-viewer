@@ -125,6 +125,7 @@ void displayMesh (void) {
 			break;
 		case SHADED_WITH_EDGES:
 			displayFlatShaded();
+			glEnable(GL_POLYGON_OFFSET_FILL);
 			glPolygonOffset(1.0, 1.0);
 			displayWireframe();
 			break;
