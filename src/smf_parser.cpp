@@ -2,8 +2,8 @@
 
 Mesh *mesh;
 
-// Read file and parse data
-void parseSmfFile(string filename) {
+// Read SMF file and parse data
+void parseSmfFile (string filename) {
 	ifstream smf_file;
 	smf_file.open(filename.c_str());
 
@@ -12,49 +12,38 @@ void parseSmfFile(string filename) {
 		exit(1);
 	}
 
+	char type;
 	int numVertices, numFaces;
 
-	char type;
-	int v = 1, f = 1;
+	smf_file >> type >> numVertices >> numFaces; // Read first line for number of vertices and faces
 
-	// Read first line for number of vertices and faces
-	smf_file >> type >> numVertices >> numFaces;
+	mesh = new Mesh(numVertices, numFaces); // Initialize Mesh
 
-	mesh = new Mesh(numVertices, numFaces);
-
-	// Read Data
+	// Read remaining data
 	while (smf_file >> type) {
+		string line;
 		float x, y, z;
 		int v1, v2, v3;
-		string line;
-		
-		switch (type) {
-			case '#': {
-				// Ignore comments
-				getline(smf_file, line); 
-				break;
-			}
 
-			case 'v': {
+		switch (type) {
+			case '#':
+				getline(smf_file, line); // Ignore comments starting with '#'
+				break;
+			case 'v':
 				smf_file >> x >> y >> z;
 				mesh->insertVertex(x, y, z);
-				v++;
 				break;
-			}
-
-			case 'f': {
+			case 'f':
 				smf_file >> v1 >> v2 >> v3;
 				mesh->insertTriangle(v1, v2, v3);
-				f++;
 				break;
-			}
 		}
 	}
 
 	smf_file.close();
 }
 
-void writeSmfFile(string filename) {
+void writeSmfFile (string filename) {
 	ofstream smf_file;
 	smf_file.open(filename.c_str());
 	
