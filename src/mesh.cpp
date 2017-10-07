@@ -117,27 +117,20 @@ void Mesh::insertTriangle (int v1, int v2, int v3) {
 		e3->right_prev = e1;
 	}
 
-	insertFaceNormalForEachVertex(f, v1, v2, v3);
+	insertFaceNormal(f, v1, v2, v3);
 	updateVertexNormalForEachVertex(f, v1, v2, v3);
 }
 
 // Insert the face normal for vertex v1
-void Mesh::insertFaceNormalForVertex (Face *f, int v1, int v2, int v3) {
-	Vector *faceNormal = getFaceNormalFromVertex(vertexMap[v1], vertexMap[v2], vertexMap[v3]);
-	faceNormalMap.insert(make_pair(getFaceNormalForVertexKey(f, vertexMap[v1]), faceNormal));
-}
-
-// Insert the face normal for each vertex v1, v2, and v3
-void Mesh::insertFaceNormalForEachVertex (Face *f, int v1, int v2, int v3) {
-	insertFaceNormalForVertex(f, v1, v2, v3);
-	insertFaceNormalForVertex(f, v2, v3, v1);
-	insertFaceNormalForVertex(f, v3, v1, v2);
+void Mesh::insertFaceNormal (Face *f, int v1, int v2, int v3) {
+	Vector *faceNormal = getFaceNormalVector(vertexMap[v1], vertexMap[v2], vertexMap[v3]);
+	faceNormalMap.insert(make_pair(to_string(faceIndexMap[f]), faceNormal));
 }
 
 // Update the vertex normal for vertex v by adding the face normal
 void Mesh::updateVertexNormalForVertex (Face *f, int v) {
 	Vertex *vertex = vertexMap[v];
-	Vector *faceNormal = getFaceNormalForVertex(f, vertex);
+	Vector *faceNormal = getFaceNormal(f);
 	vertex->normal = *(vertex->normal) + *faceNormal;
 }
 
@@ -158,14 +151,9 @@ W_edge *Mesh::getEdge (int v1, int v2) {
 		return NULL;
 }
 
-// Compute the key to store the face normal for vertex in faceNormalMap
-string Mesh::getFaceNormalForVertexKey (Face *f, Vertex *v) {
-	return to_string(faceIndexMap[f]) + "|" + to_string(vertexIndexMap[v]); 
-}
-
 // Fetch the face normal for vertex
-Vector *Mesh::getFaceNormalForVertex (Face *f, Vertex *v) {
-	map<string, Vector*>::iterator it = faceNormalMap.find(getFaceNormalForVertexKey(f, v));
+Vector *Mesh::getFaceNormal (Face *f) {
+	map<string, Vector*>::iterator it = faceNormalMap.find(to_string(faceIndexMap[f]));
 
 	if (it != faceNormalMap.end())
 		return it->second;
@@ -225,7 +213,7 @@ string getEdgeKey (int v1, int v2) {
 }
 
 // Get the face normal from the first vertex
-Vector *getFaceNormalFromVertex (Vertex *v1, Vertex *v2, Vertex *v3) {
+Vector *getFaceNormalVector (Vertex *v1, Vertex *v2, Vertex *v3) {
 	Vector *e1 = *v2->vector - *v1->vector;
 	Vector *e2 = *v3->vector - *v1->vector;
 

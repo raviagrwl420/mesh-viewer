@@ -75,14 +75,9 @@ void myGlutDisplay(void) {
 				Face* f = mesh->faceMap[i];
 				mesh->getAllVerticesForFace(f, vertices);
 
-				map<string, Vector*>::iterator it = mesh->faceNormalMap.find(mesh->getFaceNormalForVertexKey(f, vertices[0]));
+				Vector *faceNormal = mesh->getFaceNormal(f);
 
-				if (it != mesh->faceNormalMap.end()) {
-					Vector *faceNormal = it->second;
-					glNormal3f(faceNormal->x, faceNormal->y, faceNormal->z);
-				} else {
-					cout << "Error Flat" << endl;
-				}
+				glNormal3f(faceNormal->x, faceNormal->y, faceNormal->z);
 
 				glVertex3f(vertices[0]->x, vertices[0]->y, vertices[0]->z);
 				glVertex3f(vertices[1]->x, vertices[1]->y, vertices[1]->z);

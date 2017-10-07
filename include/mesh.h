@@ -52,25 +52,31 @@ struct Mesh {
 
 	Mesh (int numVertices, int numFaces) : numVertices(numVertices), numFaces(numFaces) {};
 
-	Vertex *insertVertex(float x, float y, float z);
-	W_edge *insertEdge(int v1, int v2);
-	Face *insertFace(W_edge *edge);
+	Vertex *insertVertex (float x, float y, float z);
+
+	W_edge *insertEdge (int v1, int v2);
+
+	Face *insertFace (W_edge *edge);
+
 	void insertTriangle (int v1, int v2, int v3);
 
-	void insertFaceNormalForVertex(Face *f, int v1, int v2, int v3);
-	void insertFaceNormalForEachVertex (Face *f, int v1, int v2, int v3);
-	void updateVertexNormalForVertex(Face *f, int v1);
-	void updateVertexNormalForEachVertex(Face *f, int v1, int v2, int v3);
+	void insertFaceNormal (Face *f, int v1, int v2, int v3);
+
+	void updateVertexNormalForVertex (Face *f, int v1);
+
+	void updateVertexNormalForEachVertex (Face *f, int v1, int v2, int v3);
 
 	W_edge *getEdge (int v1, int v2);
-	string getFaceNormalForVertexKey (Face *f, Vertex *v);
-	Vector *getFaceNormalForVertex (Face *f, Vertex *v);
+	
+	Vector *getFaceNormal (Face *f);
 
-	void getAllEdgesForFace(Face *f, W_edge *edges[3]);
-	void getAllVerticesForFace(Face *f, Vertex *vertices[3]);
+	void getAllEdgesForFace (Face *f, W_edge *edges[3]);
+	
+	void getAllVerticesForFace (Face *f, Vertex *vertices[3]);
 };
 
 string getEdgeKey (int v1, int v2);
-Vector *getFaceNormalFromVertex(Vertex *v1, Vertex *v2, Vertex *v3);
+
+Vector *getFaceNormalVector (Vertex *v1, Vertex *v2, Vertex *v3);
 
 #endif
