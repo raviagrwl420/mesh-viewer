@@ -14,7 +14,10 @@ using std::shared_ptr;
 using std::array;
 
 enum DisplayType {FLAT_SHADED, SMOOTH_SHADED, WIREFRAME, SHADED_WITH_EDGES};
-enum Buttons {ROTATION, OPEN, SAVE, QUIT};
+enum Buttons {ROTATION, OPEN, SAVE, QUIT, SUBDIVIDE};
+
+// Subdivision
+enum Subdivision {BUTTERFLY, LOOP};
 
 float xy_aspect;
 int last_x, last_y;
@@ -26,6 +29,10 @@ int displayType = FLAT_SHADED;
 float scale = 1.0;
 float view_rotate[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
 float obj_pos[] = {0.0, 0.0, 0.0};
+
+// Subdivision
+int subdivision = BUTTERFLY;
+int subdivisionLevel = 1;
 
 // GLUT idle function
 void glutIdle (void) {
@@ -203,6 +210,11 @@ void control_cb(int control) {
 	}
 };
 
+void subdivision_cb (int control) {
+	cout << "Subdivision: " << subdivision << endl;
+	cout << "Level: " << subdivisionLevel << endl;
+}
+
 // Setup GLUI
 void setupGlui () {
 	// Initialize GLUI subwindow
@@ -214,6 +226,7 @@ void setupGlui () {
 	// Setup UI
 	// Add Panel "Display Options"
 	GLUI_Panel *displayOptionsPanel = glui->add_panel("Display Options");
+	GLUI_Panel *subdivisionPanel = glui->add_panel("Subdivision");
 	GLUI_Panel *transformationsPanel = glui->add_panel("Transformations");
 	GLUI_Panel *controlsPanel = glui->add_panel("Controls");
 
@@ -223,6 +236,18 @@ void setupGlui () {
 	listbox->add_item(SMOOTH_SHADED, "Smooth Shaded");
 	listbox->add_item(WIREFRAME, "Wireframe");
 	listbox->add_item(SHADED_WITH_EDGES, "Shaded with Edges");
+
+	// Subdivision
+	GLUI_Listbox *subdivisionListbox = new GLUI_Listbox(subdivisionPanel, "Type:", &subdivision);
+	subdivisionListbox->add_item(BUTTERFLY, "Butterfly");
+	subdivisionListbox->add_item(LOOP, "Loop");
+	subdivisionListbox->set_alignment(GLUI_ALIGN_RIGHT);
+
+	GLUI_Spinner *subdivision_level_spinner = new GLUI_Spinner(subdivisionPanel, "Level:", &subdivisionLevel);
+  	subdivision_level_spinner->set_int_limits(1, 20);
+  	subdivision_level_spinner->set_alignment(GLUI_ALIGN_RIGHT);
+
+  	glui->add_button_to_panel(subdivisionPanel, "start", SUBDIVIDE, subdivision_cb);
 
 	// Add Scale Spinner
 	GLUI_Spinner *scale_spinner = new GLUI_Spinner(transformationsPanel, "Scale:", &scale);
