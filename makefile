@@ -7,7 +7,7 @@ SRCDIR := src
 BUILDDIR := build
 
 # Target
-TARGET := smf_view
+TARGET := subd
 
 # Source Extention
 SRCEXT := cpp
