@@ -21,6 +21,11 @@ Vector *Vector::normalize () const {
 	return new Vector(x/length, y/length, z/length);
 };
 
+// Normalize the vector
+Vector *Vector::scalar_mult (float scalar) const {
+	return new Vector(x * scalar, y * scalar, z * scalar);
+};
+
 // Take a cross product for the vectors
 Vector *cross (const Vector &vec1, const Vector &vec2) {
 	return new Vector(vec1.y * vec2.z - vec1.z * vec2.y, vec1.z * vec2.x - vec1.x * vec2.z, vec1.x * vec2.y - vec1.y * vec2.x);

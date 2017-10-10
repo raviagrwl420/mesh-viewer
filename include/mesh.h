@@ -5,11 +5,16 @@
 #include <map>
 #include <string>
 
+#define PI 3.14159265
+
 using std::string;
 using std::to_string;
 
 using std::map;
 using std::make_pair;
+
+// Subdivision Types
+enum SubdivisionType {BUTTERFLY, LOOP};
 
 // Winged Edge
 struct W_edge {
@@ -51,9 +56,13 @@ struct Mesh {
 	map<string, Vector*> faceNormalMap;
 	float xMin, yMin, zMin, xMax, yMax, zMax;
 
+	Mesh () {};
+
 	Mesh (int numVertices, int numFaces) : numVertices(numVertices), numFaces(numFaces) {};
 
 	Vertex *insertVertex (float x, float y, float z);
+
+	Vertex *insertVertex (Vertex *vertex);
 
 	W_edge *insertEdge (int v1, int v2);
 
@@ -76,10 +85,17 @@ struct Mesh {
 	void getAllVerticesForFace (Face *f, Vertex *vertices[3]);
 
 	void computeBoundingBox ();
+
+	// Subdivision
+	Mesh *loopSubdivision ();
+
+	Mesh *subdivideMesh (int subdivisionType, int subdivisionLevel);
 };
 
 string getEdgeKey (int v1, int v2);
 
 Vector *getFaceNormalVector (Vertex *v1, Vertex *v2, Vertex *v3);
+
+Vertex *getNextVertex (W_edge *edge, W_edge *next_edge);
 
 #endif

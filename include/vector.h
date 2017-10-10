@@ -17,6 +17,8 @@ struct Vector {
 	Vector *operator- (const Vector &vec) const;
 
 	Vector *normalize () const;
+
+	Vector *scalar_mult (float scalar) const;
 };
 
 Vector *cross (const Vector&, const Vector&);

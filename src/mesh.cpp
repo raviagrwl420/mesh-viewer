@@ -43,10 +43,17 @@ void Mesh::computeBoundingBox () {
 Vertex *Mesh::insertVertex (float x, float y, float z) {
 	Vertex *vertex = new Vertex(x, y, z);
 
+	return insertVertex(vertex);
+}
+
+// Insert a vertex in the mesh
+Vertex *Mesh::insertVertex (Vertex *vertex) {
 	int index = vertexMap.size() + 1;
 
 	vertexMap.insert(make_pair(index, vertex));
 	vertexIndexMap.insert(make_pair(vertex, index));
+
+	numVertices = vertexMap.size();
 
 	return vertex;
 }
@@ -68,6 +75,8 @@ Face *Mesh::insertFace (W_edge *edge) {
 	
 	faceMap.insert(make_pair(index, face));
 	faceIndexMap.insert(make_pair(face, index));
+
+	numFaces = faceMap.size();
 
 	return face;
 }
@@ -212,21 +221,11 @@ void Mesh::getAllVerticesForFace (Face *f, Vertex *vertices[3]) {
 	if (edge1->right == f) {
 		vertices[0] = edge1->end;
 		vertices[1] = edge1->start;
-
-		W_edge *edge2 = edge1->right_next;
-		if (edge1->end == edge2->start)
-			vertices[2] = edge2->end;
-		else
-			vertices[2] = edge2->start;
+		vertices[2] = getNextVertex(edge1, edge1->right_next);
 	} else {
 		vertices[0] = edge1->start;
 		vertices[1] = edge1->end;
-
-		W_edge *edge2 = edge1->left_next;
-		if (edge1->end == edge2->start)
-			vertices[2] = edge2->end;
-		else
-			vertices[2] = edge2->start;
+		vertices[2] = getNextVertex(edge1, edge1->left_next);
 	}
 }
 
@@ -244,4 +243,137 @@ Vector *getFaceNormalVector (Vertex *v1, Vertex *v2, Vertex *v3) {
 	Vector *e2 = *v3->vector - *v1->vector;
 
 	return cross(*e1, *e2);
+}
+
+// Get next vertex
+Vertex *getNextVertex (W_edge *edge, W_edge *next_edge) {
+	if (edge->start == next_edge->start || edge->end == next_edge->start) {
+		return next_edge->end;
+	} else if (edge->start == next_edge->end || edge->end == next_edge->end) {
+		return next_edge->start;
+	}
+}
+
+// Subdivision
+
+// Compute mid point vertex for an edge
+Vertex *computeMidpoint (W_edge *edge) {
+	Vertex *left_vertex = getNextVertex(edge, edge->left_next);
+	Vertex *right_vertex = getNextVertex(edge, edge->right_next);
+
+	Vector *newVertexPosition = edge->start->vector->scalar_mult(3.0/8.0);
+	newVertexPosition = *newVertexPosition + *edge->end->vector->scalar_mult(3.0/8.0);
+	newVertexPosition = *newVertexPosition + *left_vertex->vector->scalar_mult(1.0/8.0);
+	newVertexPosition = *newVertexPosition + *right_vertex->vector->scalar_mult(1.0/8.0);
+
+	return new Vertex(newVertexPosition->x, newVertexPosition->y, newVertexPosition->z);
+}
+
+// Get the degree of a vertex
+int getDegreeOfVertex(Vertex *vertex) {
+	W_edge *e1 = vertex->edge;
+	int count = 0;
+
+	W_edge *e = e1;
+	do {
+		if (e->start == vertex) {
+			e = e->left_prev;
+		} else {
+			e = e->right_next;
+		}
+		count++;
+	} while (e != e1);
+
+	return count;
+}
+
+// Compute beta for Loop subdivision
+float computeBeta (int k) {
+	float beta = (1.0/4.0) * cos((2*PI)/k);
+	beta = powf((3.0/8.0) + beta, 2);
+	beta = (5.0/8.0 - beta) / k;
+	return beta;
+}
+
+// Compute new vertex for a vertex
+Vertex *computeNewVertex (Vertex *vertex) {
+	int k = getDegreeOfVertex(vertex);
+	float beta = computeBeta(k);
+
+	Vector *newVertexPosition = vertex->vector->scalar_mult(1 - k*beta);
+
+	Vertex *nextVertex;
+	W_edge *e = vertex->edge;
+	for (int i = 0; i < k; i++) {
+		if (e->start == vertex) {
+			nextVertex = getNextVertex(e, e->left_prev);
+			e = e->left_prev;
+		} else {
+			nextVertex = getNextVertex(e, e->right_next);
+			e = e->right_next;
+		}
+
+		newVertexPosition = *newVertexPosition + *nextVertex->vector->scalar_mult(beta);
+	}
+
+	return new Vertex(newVertexPosition->x, newVertexPosition->y, newVertexPosition->z);
+}
+
+// Perform Loop subdivision
+Mesh *Mesh::loopSubdivision () {
+	Mesh *subdividedMesh = new Mesh();
+	map<string, Vertex*> edgeVertexMap;
+	Vertex *newVertex;
+
+	// Compute new vertices for each vertex
+	for (int i = 1; i <= numVertices; i++) {
+		newVertex = computeNewVertex(vertexMap[i]);
+		subdividedMesh->insertVertex(newVertex);
+	}
+
+	// Compute new mid point vertices for each edge
+	W_edge *edge;
+	for (map<string, W_edge*>::const_iterator it = edgeMap.begin(); it != edgeMap.end(); it++) {
+		edge = it->second;
+
+		int startIndex = vertexIndexMap[edge->start];
+		int endIndex = vertexIndexMap[edge->end];
+
+		newVertex = computeMidpoint(edge);
+		edgeVertexMap.insert(make_pair(getEdgeKey(startIndex, endIndex), newVertex));
+		subdividedMesh->insertVertex(newVertex);
+	}
+
+	// Finish by adding connections
+	Face *face;
+	Vertex *vertices[3];
+	for (int i = 1; i <= numFaces; i++) {
+		face = faceMap[i];
+		getAllVerticesForFace(face, vertices);
+
+		int a = vertexIndexMap[vertices[0]];
+		int b = vertexIndexMap[vertices[1]];
+		int c = vertexIndexMap[vertices[2]];
+
+		int p = subdividedMesh->vertexIndexMap[edgeVertexMap[getEdgeKey(a, b)]];
+		int q = subdividedMesh->vertexIndexMap[edgeVertexMap[getEdgeKey(b, c)]];
+		int r = subdividedMesh->vertexIndexMap[edgeVertexMap[getEdgeKey(c, a)]];
+
+		subdividedMesh->insertTriangle(a, p, r);
+		subdividedMesh->insertTriangle(b, q, p);
+		subdividedMesh->insertTriangle(c, r, q);
+		subdividedMesh->insertTriangle(p, q, r);
+	}
+
+	return subdividedMesh;
+}
+
+Mesh *Mesh::subdivideMesh (int subdivisionType, int subdivisionLevel) {
+	Mesh *subdividedMesh = this;
+
+	for (int i = 0; i < subdivisionLevel; i++) {
+		subdividedMesh = subdividedMesh->loopSubdivision();
+	}
+
+	return subdividedMesh;
 }
