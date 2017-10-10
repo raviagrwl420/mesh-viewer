@@ -14,7 +14,7 @@ using std::shared_ptr;
 using std::array;
 
 enum DisplayType {FLAT_SHADED, SMOOTH_SHADED, WIREFRAME, SHADED_WITH_EDGES};
-enum Buttons {ROTATION, OPEN, SAVE, QUIT, RESET};
+enum Buttons {ROTATION, OPEN, SAVE, QUIT};
 
 float xy_aspect;
 int last_x, last_y;
@@ -199,10 +199,6 @@ void control_cb(int control) {
 				writeSmfFile(saveFilePath);
 			break;
 		}
-
-		case RESET: {
-			// Todo: Reset!!
-		}
 	}
 };
 
@@ -246,7 +242,6 @@ void setupGlui () {
 	glui->add_separator();
 	glui->add_button("Open", OPEN, control_cb);
 	glui->add_button("Save", SAVE, control_cb);
-	glui->add_button("Reset", RESET, control_cb);
 	glui->add_button("Quit", QUIT, (GLUI_Update_CB)exit);
 };
 
