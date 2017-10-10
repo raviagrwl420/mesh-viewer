@@ -169,6 +169,7 @@ string exec(const char* cmd) {
     return result;
 }
 
+// Initialize mesh
 void initMesh (string smf_filename) {
 	parseSmfFile(smf_filename);
 	mesh->computeBoundingBox();
@@ -213,6 +214,8 @@ void setupGlui () {
 	// Setup UI
 	// Add Panel "Display Options"
 	GLUI_Panel *displayOptionsPanel = glui->add_panel("Display Options");
+	GLUI_Panel *transformationsPanel = glui->add_panel("Transformations");
+	GLUI_Panel *controlsPanel = glui->add_panel("Controls");
 
 	// Add Listbox
 	GLUI_Listbox *listbox = new GLUI_Listbox(displayOptionsPanel, "Display Type:", &displayType);
@@ -222,27 +225,26 @@ void setupGlui () {
 	listbox->add_item(SHADED_WITH_EDGES, "Shaded with Edges");
 
 	// Add Scale Spinner
-	GLUI_Spinner *scale_spinner = new GLUI_Spinner(displayOptionsPanel, "Scale:", &scale);
+	GLUI_Spinner *scale_spinner = new GLUI_Spinner(transformationsPanel, "Scale:", &scale);
   	scale_spinner->set_float_limits(0.2f, 5.0);
   	scale_spinner->set_alignment(GLUI_ALIGN_RIGHT);
 	
 	// Add Rotation
-	GLUI_Panel *rotation_panel = glui->add_panel_to_panel(displayOptionsPanel, "", GLUI_PANEL_NONE);
+	GLUI_Panel *rotation_panel = glui->add_panel_to_panel(transformationsPanel, "", GLUI_PANEL_NONE);
 	GLUI_Rotation *view_rot = glui->add_rotation_to_panel(rotation_panel, "Rotate", view_rotate, ROTATION, control_cb);
 	view_rot->set_spin(1.0);
 
 	// Add Translation
-	GLUI_Panel *translation_panel = glui->add_panel_to_panel(displayOptionsPanel, "", GLUI_PANEL_NONE);
+	GLUI_Panel *translation_panel = glui->add_panel_to_panel(transformationsPanel, "", GLUI_PANEL_NONE);
 	GLUI_Translation *trans_xy = glui->add_translation_to_panel(translation_panel, "Translate XY", GLUI_TRANSLATION_XY, obj_pos);
 	trans_xy->scale_factor = 0.1f;
 	GLUI_Translation *trans_z = glui->add_translation_to_panel(translation_panel, "Translate Z", GLUI_TRANSLATION_Z, &obj_pos[2]);
 	trans_z->scale_factor = 0.1f;
 
 	// Add Buttons
-	glui->add_separator();
-	glui->add_button("Open", OPEN, control_cb);
-	glui->add_button("Save", SAVE, control_cb);
-	glui->add_button("Quit", QUIT, (GLUI_Update_CB)exit);
+	glui->add_button_to_panel(controlsPanel, "Open", OPEN, control_cb);
+	glui->add_button_to_panel(controlsPanel, "Save", SAVE, control_cb);
+	glui->add_button_to_panel(controlsPanel, "Quit", QUIT, (GLUI_Update_CB)exit);
 };
 
 int main(int argc, char* argv[]) {
@@ -273,6 +275,7 @@ int main(int argc, char* argv[]) {
 	// Enable z-buffering
 	glEnable(GL_DEPTH_TEST);
 
+	// Setup GLUI
 	setupGlui();
 
 	// Start Main Loop
