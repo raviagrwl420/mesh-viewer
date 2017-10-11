@@ -368,11 +368,186 @@ Mesh *Mesh::loopSubdivision () {
 	return subdividedMesh;
 }
 
+// Check if a vertex is regular
+bool isRegular (Vertex *vertex) {
+	int degree = getDegreeOfVertex(vertex);
+	return degree == 6;
+}
+
+// Compute weights for Butterfly subdivision
+float computeButterflyWeight (int k, int j) {
+	float weight;
+
+	if (k == 3) {
+		if (j == 0)
+			weight = 5.0/12.0;
+		else
+			weight = -1.0/12.0;
+	} else if (k == 4) {
+		if (j == 0)
+			weight = 3.0/8.0;
+		else if (j == 2)
+			weight = -1.0/8.0;
+		else
+			weight = 0;
+	} else {
+		weight = (1.0/k) * (1.0/4.0 + cos((2.0*j*PI) / k) + (1.0/2.0)*cos((4.0*j*PI) / k));
+	}
+
+	return weight;
+}
+
+// If we have an edge and a vertex, get the other vertex
+Vertex *getOtherVertex(W_edge *edge, Vertex *vertex) {
+	if (edge->start == vertex)
+		return edge->end;
+	else 
+		return edge->start;
+}
+
+// Compute new vertex around irregular vertex
+Vertex *computeNewVertexAroundIrregularVertex (W_edge *edge, Vertex *vertex) {
+	int k = getDegreeOfVertex(vertex);
+	float total_weights = 0;
+
+	Vertex *otherVertex = getOtherVertex(edge, vertex);
+	float s0weight = computeButterflyWeight(k, 0);
+	total_weights += s0weight;
+	Vector *newVertexPosition = otherVertex->vector->scalar_mult(s0weight);
+
+	Vertex *nextVertex;
+	W_edge *e = edge;
+	for (int i = 1; i < k; i++) {
+		float s = computeButterflyWeight(k, i);
+		total_weights += s;
+
+		if (e->start == vertex) {
+			nextVertex = getNextVertex(e, e->left_prev);
+			e = e->left_prev;
+		} else {
+			nextVertex = getNextVertex(e, e->right_next);
+			e = e->right_next;
+		}
+
+		newVertexPosition = *newVertexPosition + *nextVertex->vector->scalar_mult(s);
+	}
+
+	newVertexPosition = *newVertexPosition + *vertex->vector->scalar_mult(1 - total_weights);
+
+	return new Vertex(newVertexPosition->x, newVertexPosition->y, newVertexPosition->z);
+}
+
+// Helper method to get a butterfly vertex
+Vertex *getButterflyVertex (W_edge *edge, W_edge *next_edge) {
+	Vertex *nextVertex = getNextVertex(edge, next_edge);
+
+	if (edge->left == next_edge->left || edge->right == next_edge->left)
+		return getNextVertex(next_edge, next_edge->right_next);
+	else if (edge->left == next_edge->right || edge->right == next_edge->right)
+		return getNextVertex(next_edge, next_edge->left_next);
+}
+
+// Helper method to get all butterfly vertices
+void getButterflyVertices (W_edge *edge, Vertex *vertices[4]) {
+	vertices[0] = getButterflyVertex(edge, edge->left_prev);
+	vertices[1] = getButterflyVertex(edge, edge->left_next);
+	vertices[2] = getButterflyVertex(edge, edge->right_prev);
+	vertices[3] = getButterflyVertex(edge, edge->right_next);
+}
+
+// Compute new vertex for an edge
+Vertex *computeMidpointButterfly (W_edge *edge) {
+	bool isStartVertexRegular = isRegular(edge->start);
+	bool isEndVertexRegular = isRegular(edge->end);
+
+	Vector *newVertexPosition;
+	if (isStartVertexRegular && isEndVertexRegular) {
+		Vertex *left_vertex = getNextVertex(edge, edge->left_next);
+		Vertex *right_vertex = getNextVertex(edge, edge->right_next);
+		Vertex *butterflyVertices[4];
+
+		getButterflyVertices(edge, butterflyVertices);
+
+		newVertexPosition = edge->start->vector->scalar_mult(1.0/2.0);
+		newVertexPosition = *newVertexPosition + *edge->end->vector->scalar_mult(1.0/2.0);
+		newVertexPosition = *newVertexPosition + *left_vertex->vector->scalar_mult(1.0/8.0);
+		newVertexPosition = *newVertexPosition + *right_vertex->vector->scalar_mult(1.0/8.0);
+
+		for (int i = 0; i < 4; i++) {
+			newVertexPosition = *newVertexPosition + *butterflyVertices[i]->vector->scalar_mult(-1.0/16.0);
+		}
+	} else {
+		if (isStartVertexRegular)
+			return computeNewVertexAroundIrregularVertex(edge, edge->end);
+		else if (isEndVertexRegular)
+			return computeNewVertexAroundIrregularVertex(edge, edge->start);
+		else {
+			Vertex *v1 = computeNewVertexAroundIrregularVertex(edge, edge->start);
+			Vertex *v2 = computeNewVertexAroundIrregularVertex(edge, edge->end);
+			newVertexPosition = *v1->vector->scalar_mult(1.0/2.0) + *v2->vector->scalar_mult(1.0/2.0);
+		}
+	}
+
+	return new Vertex(newVertexPosition->x, newVertexPosition->y, newVertexPosition->z);
+}
+
+// Perform Butterfly subdivision
+Mesh *Mesh::butterflySubdivision () {
+	Mesh *subdividedMesh = new Mesh();
+	map<string, Vertex*> edgeVertexMap;
+	Vertex *newVertex;
+
+	// Add existing vertices to subdividedMesh
+	for (int i = 1; i <= numVertices; i++) {
+		subdividedMesh->insertVertex(vertexMap[i]);
+	}
+
+	// Compute new mid point vertices for each edge
+	W_edge *edge;
+	for (map<string, W_edge*>::const_iterator it = edgeMap.begin(); it != edgeMap.end(); it++) {
+		edge = it->second;
+
+		int startIndex = vertexIndexMap[edge->start];
+		int endIndex = vertexIndexMap[edge->end];
+
+		newVertex = computeMidpointButterfly(edge);
+		edgeVertexMap.insert(make_pair(getEdgeKey(startIndex, endIndex), newVertex));
+		subdividedMesh->insertVertex(newVertex);
+	}
+
+	// Finish by adding connections
+	Face *face;
+	Vertex *vertices[3];
+	for (int i = 1; i <= numFaces; i++) {
+		face = faceMap[i];
+		getAllVerticesForFace(face, vertices);
+
+		int a = vertexIndexMap[vertices[0]];
+		int b = vertexIndexMap[vertices[1]];
+		int c = vertexIndexMap[vertices[2]];
+
+		int p = subdividedMesh->vertexIndexMap[edgeVertexMap[getEdgeKey(a, b)]];
+		int q = subdividedMesh->vertexIndexMap[edgeVertexMap[getEdgeKey(b, c)]];
+		int r = subdividedMesh->vertexIndexMap[edgeVertexMap[getEdgeKey(c, a)]];
+
+		subdividedMesh->insertTriangle(a, p, r);
+		subdividedMesh->insertTriangle(b, q, p);
+		subdividedMesh->insertTriangle(c, r, q);
+		subdividedMesh->insertTriangle(p, q, r);
+	}
+
+	return subdividedMesh;
+}
+
+// Subdivide a mesh
 Mesh *Mesh::subdivideMesh (int subdivisionType, int subdivisionLevel) {
 	Mesh *subdividedMesh = this;
 
 	for (int i = 0; i < subdivisionLevel; i++) {
-		subdividedMesh = subdividedMesh->loopSubdivision();
+		if (subdivisionType == LOOP)
+			subdividedMesh = subdividedMesh->loopSubdivision();
+		else if (subdivisionType == BUTTERFLY)
+			subdividedMesh = subdividedMesh->butterflySubdivision();
 	}
 
 	return subdividedMesh;

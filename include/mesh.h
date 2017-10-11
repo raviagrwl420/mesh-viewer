@@ -89,6 +89,8 @@ struct Mesh {
 	// Subdivision
 	Mesh *loopSubdivision ();
 
+	Mesh *butterflySubdivision ();
+
 	Mesh *subdivideMesh (int subdivisionType, int subdivisionLevel);
 };
 
