@@ -6,7 +6,7 @@
 #include <string>
 #include <array>
 
-#define WIDTH 800
+#define WIDTH 1000
 #define HEIGHT 600
 
 using std::runtime_error;
@@ -16,8 +16,7 @@ using std::array;
 enum DisplayType {FLAT_SHADED, SMOOTH_SHADED, WIREFRAME, SHADED_WITH_EDGES};
 enum Buttons {ROTATION, OPEN, SAVE, QUIT, SUBDIVIDE};
 
-// Subdivision
-enum Subdivision {BUTTERFLY, LOOP};
+Mesh *mesh;
 
 float xy_aspect;
 int last_x, last_y;
@@ -31,7 +30,7 @@ float view_rotate[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
 float obj_pos[] = {0.0, 0.0, 0.0};
 
 // Subdivision
-int subdivision = BUTTERFLY;
+int subdivisionType = BUTTERFLY;
 int subdivisionLevel = 1;
 
 // GLUT idle function
@@ -178,7 +177,7 @@ string exec(const char* cmd) {
 
 // Initialize mesh
 void initMesh (string smf_filename) {
-	parseSmfFile(smf_filename);
+	mesh = parseSmfFile(smf_filename);
 	mesh->computeBoundingBox();
 	obj_pos[0] = -(mesh->xMin + mesh->xMax) / 2;
 	obj_pos[1] = -(mesh->yMin + mesh->yMax) / 2;
@@ -204,15 +203,17 @@ void control_cb(int control) {
 			// Remove the newline character at the end
 			saveFilePath = saveFilePath.substr(0, saveFilePath.size() - 1);
 			if (saveFilePath.size() != 0)
-				writeSmfFile(saveFilePath);
+				writeSmfFile(mesh, saveFilePath);
 			break;
 		}
 	}
 };
 
 void subdivision_cb (int control) {
-	cout << "Subdivision: " << subdivision << endl;
-	cout << "Level: " << subdivisionLevel << endl;
+	if (mesh == NULL)
+		return;
+
+	mesh = mesh->subdivideMesh(subdivisionType, subdivisionLevel);
 }
 
 // Setup GLUI
@@ -238,13 +239,13 @@ void setupGlui () {
 	listbox->add_item(SHADED_WITH_EDGES, "Shaded with Edges");
 
 	// Subdivision
-	GLUI_Listbox *subdivisionListbox = new GLUI_Listbox(subdivisionPanel, "Type:", &subdivision);
+	GLUI_Listbox *subdivisionListbox = new GLUI_Listbox(subdivisionPanel, "Type:", &subdivisionType);
 	subdivisionListbox->add_item(BUTTERFLY, "Butterfly");
 	subdivisionListbox->add_item(LOOP, "Loop");
 	subdivisionListbox->set_alignment(GLUI_ALIGN_RIGHT);
 
 	GLUI_Spinner *subdivision_level_spinner = new GLUI_Spinner(subdivisionPanel, "Level:", &subdivisionLevel);
-  	subdivision_level_spinner->set_int_limits(1, 20);
+  	subdivision_level_spinner->set_int_limits(1, 5);
   	subdivision_level_spinner->set_alignment(GLUI_ALIGN_RIGHT);
 
   	glui->add_button_to_panel(subdivisionPanel, "start", SUBDIVIDE, subdivision_cb);

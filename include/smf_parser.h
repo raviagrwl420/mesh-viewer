@@ -14,9 +14,7 @@ using std::endl;
 using std::ifstream;
 using std::ofstream;
 
-extern Mesh *mesh;
-
-void parseSmfFile(string);
-void writeSmfFile(string);
+Mesh *parseSmfFile(string);
+void writeSmfFile(Mesh *mesh, string);
 
 #endif

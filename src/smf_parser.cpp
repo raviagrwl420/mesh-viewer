@@ -1,9 +1,7 @@
 #include <smf_parser.h>
 
-Mesh *mesh;
-
 // Read SMF file and parse data
-void parseSmfFile (string filename) {
+Mesh *parseSmfFile (string filename) {
 	ifstream smf_file;
 	smf_file.open(filename.c_str());
 
@@ -17,7 +15,7 @@ void parseSmfFile (string filename) {
 
 	smf_file >> type >> numVertices >> numFaces; // Read first line for number of vertices and faces
 
-	mesh = new Mesh(numVertices, numFaces); // Initialize Mesh
+	Mesh *mesh = new Mesh(numVertices, numFaces); // Initialize Mesh
 
 	// Read remaining data
 	while (smf_file >> type) {
@@ -41,9 +39,11 @@ void parseSmfFile (string filename) {
 	}
 
 	smf_file.close();
+
+	return mesh;
 }
 
-void writeSmfFile (string filename) {
+void writeSmfFile (Mesh *mesh, string filename) {
 	ofstream smf_file;
 	smf_file.open(filename.c_str());
 	
