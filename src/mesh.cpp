@@ -471,7 +471,7 @@ Vertex *computeMidpointButterfly (W_edge *edge) {
 
 		getButterflyVertices(edge, butterflyVertices);
 
-		newVertexPosition += edge->start->position * (1.0f/2.0f);
+		newVertexPosition = edge->start->position * (1.0f/2.0f);
 		newVertexPosition += edge->end->position * (1.0f/2.0f);
 		newVertexPosition += left_vertex->position * (1.0f/8.0f);
 		newVertexPosition += right_vertex->position * (1.0f/8.0f);
