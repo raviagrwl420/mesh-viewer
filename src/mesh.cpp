@@ -4,12 +4,14 @@
 Vertex::Vertex (float x, float y, float z) {
 	this->position = vec3(x, y, z);
 	this->normal = vec3(0.0, 0.0, 0.0);
+	this->quadric = mat4(0.0);
 }
 
 // Vertex Constructor
 Vertex::Vertex (vec3 position) {
 	this->position = position;
 	this->normal = vec3(0.0, 0.0, 0.0);
+	this->quadric = mat4(0.0);
 }
 
 void Mesh::computeBoundingBox () {
@@ -63,13 +65,60 @@ Vertex *Mesh::insertVertex (Vertex *vertex) {
 	return vertex;
 }
 
+// Delete a vertex from the mesh
+void Mesh::deleteVertex (Vertex *vertex) {
+	int index = vertexIndexMap[vertex];
+	vertexIndexMap.erase(vertex);
+
+	if (index == numVertices) {
+		vertexMap.erase(numVertices);
+	} else {
+		Vertex *last = vertexMap[numVertices];
+		vertexMap.erase(numVertices);
+
+		vertexMap[index] = last;
+		vertexIndexMap[last] = index;	
+	}
+	
+	numVertices--;
+}
+
 // Insert an edge in the mesh
 W_edge *Mesh::insertEdge (int v1, int v2) {
 	W_edge *edge = new W_edge(vertexMap[v1], vertexMap[v2]);
 
-	edgeMap.insert(make_pair(getEdgeKey(v1, v2), edge));
+	int index = edgeMap.size() + 1;
+
+	string edgeKey = getEdgeKey(v1, v2);
+	edgeMap.insert(make_pair(edgeKey, edge));
+	edgeKeyMap.insert(make_pair(index, edgeKey));
+	edgeIndexMap.insert(make_pair(edge, index));
+
+	numEdges = edgeMap.size();
 	
 	return edge;
+}
+
+// Delete an edge from the mesh
+void Mesh::deleteEdge (W_edge *edge) {
+	int index = edgeIndexMap[edge];
+	edgeIndexMap.erase(edge);
+
+	string edgeKey = edgeKeyMap[index];
+
+	edgeMap.erase(edgeKey);
+
+	if (index == numEdges) {
+		edgeKeyMap.erase(numEdges);
+	} else {
+		string lastEdgeKey = edgeKeyMap[numEdges];
+		edgeKeyMap.erase(numEdges);
+
+		edgeKeyMap[index] = lastEdgeKey;
+		edgeIndexMap[edgeMap[lastEdgeKey]] = index;	
+	}
+	
+	numEdges--;
 }
 
 // Insert a face in the mesh
@@ -84,6 +133,29 @@ Face *Mesh::insertFace (W_edge *edge) {
 	numFaces = faceMap.size();
 
 	return face;
+}
+
+// Delete a face from the mesh
+void Mesh::deleteFace (Face *face) {
+	int index = faceIndexMap[face];
+	faceIndexMap.erase(face);
+
+	if (index == numFaces) {
+		faceMap.erase(numFaces);
+		faceNormalMap.erase(to_string(numFaces));
+	} else {
+		Face *last = faceMap[numFaces];
+		faceMap.erase(numFaces);
+
+		vec3 lastNormal = faceNormalMap[to_string(numFaces)];
+		faceNormalMap.erase(to_string(numFaces));
+
+		faceMap[index] = last;
+		faceNormalMap[to_string(index)] = lastNormal;
+		faceIndexMap[last] = index;	
+	}
+
+	numFaces--;	
 }
 
 // Insert a triangle in the mesh
@@ -163,6 +235,8 @@ void Mesh::insertTriangle (int v1, int v2, int v3) {
 
 	insertFaceNormal(f, v1, v2, v3);
 	updateVertexNormalForEachVertex(f, v1, v2, v3);
+
+	updateQuadricForEachVertex(f, v1, v2, v3);
 }
 
 // Insert the face normal for vertex v1
@@ -244,7 +318,7 @@ vec3 getFaceNormalVector (Vertex *v1, Vertex *v2, Vertex *v3) {
 	vec3 e1 = v2->position - v1->position;
 	vec3 e2 = v3->position - v1->position;
 
-	return cross(e1, e2);
+	return normalize(cross(e1, e2));
 }
 
 // Get next vertex
@@ -554,4 +628,307 @@ Mesh *Mesh::subdivideMesh (int subdivisionType, int subdivisionLevel) {
 	}
 
 	return subdividedMesh;
+}
+
+// Decimate a mesh
+
+mat4 Mesh::getQuadric (Face *f, Vertex *v) {
+	vec3 faceNormal = getFaceNormal(f);
+	vec3 vertexPosition = v->position;
+
+	float d = -dot(faceNormal, vertexPosition);
+
+	vec4 p = vec4(faceNormal, d);
+
+	return outerProduct(p, p);
+}
+
+void Mesh::updateQuadricForVertex (Face *f, int v1) {
+	Vertex *vertex = vertexMap[v1];
+	vertex->quadric += getQuadric(f, vertex);
+}
+
+void Mesh::updateQuadricForEachVertex (Face *f, int v1, int v2, int v3) {
+	updateQuadricForVertex(f, v1);
+	updateQuadricForVertex(f, v2);
+	updateQuadricForVertex(f, v3);
+}
+
+vec4 Mesh::computeNewVertexPositionForEdgeCollapse (W_edge *edge) {
+	mat4 quadric = edge->start->quadric + edge->end->quadric;
+
+	quadric[0][3] = 0;
+	quadric[1][3] = 0;
+	quadric[2][3] = 0;
+	quadric[3][3] = 1;
+
+	vec4 vec = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+	return inverse(quadric) * vec;
+}
+
+float getError (W_edge *edge, vec4 p) {
+	mat4 Q = edge->start->quadric + edge->end->quadric;
+	return dot(p*Q, p); 	
+}
+
+W_edge *Mesh::getCandidateEdgeToCollapse (int k) {
+	std::random_device rd;  //Will be used to obtain a seed for the random number engine
+	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+	std::uniform_int_distribution<> dis(1, numEdges);
+
+	float minError = FLT_MAX;
+	W_edge *candidateEdge;
+
+	for(int i = 0; i < k; i++) {
+		int edgeIndex = dis(gen);
+
+		string edgeKey = edgeKeyMap[edgeIndex];
+		W_edge *edge = edgeMap[edgeKey];
+
+		vec4 newVertexPosition = computeNewVertexPositionForEdgeCollapse(edge);
+
+		float error = getError(edge, newVertexPosition);
+
+		if (error < minError) {
+			minError = error;
+			candidateEdge = edge;
+		}
+	}
+
+	return candidateEdge;
+}
+
+bool Mesh::canCauseFoldOver (W_edge *edge) {
+	vec3 newVertexPosition(computeNewVertexPositionForEdgeCollapse(edge));
+	Vertex *newVertex = new Vertex(newVertexPosition);
+
+	W_edge *e = edge->left_next;
+
+	while (e != edge->right_next) {
+		W_edge *other;
+		if (e->start == edge->end) {
+			other = e->right_next;
+			e = e->right_prev;
+		} else {
+			other = e->left_prev;
+			e = e->left_next;
+		}
+
+		vec3 oldNormal = getFaceNormalVector(edge->end, other->start, other->end);
+		vec3 newNormal = getFaceNormalVector(newVertex, other->start, other->end);
+
+		if (dot(oldNormal, newNormal) < 0) {
+			return true;
+		}
+	}
+
+	e = edge->right_prev;
+
+	while (e != edge->left_prev) {
+		W_edge *other;
+		if (e->start == edge->start) {
+			other = e->right_next;
+			e = e->right_prev;
+		} else {
+			other = e->left_prev;
+			e = e->left_next;
+		}
+
+		vec3 oldNormal = getFaceNormalVector(edge->start, other->start, other->end);
+		vec3 newNormal = getFaceNormalVector(newVertex, other->start, other->end);
+
+		if (dot(oldNormal, newNormal) < 0) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool Mesh::canCauseNonManifoldMesh (W_edge *edge) {
+	Vertex *leftOther = getNextVertex(edge, edge->left_next);
+	Vertex *rightOther = getNextVertex(edge, edge->right_next);
+	return getDegreeOfVertex(edge->start) == 3 || getDegreeOfVertex(edge->end) == 3 ||
+		getDegreeOfVertex(leftOther) == 3 || getDegreeOfVertex(rightOther) == 3;
+}
+
+void Mesh::collapseEdge (W_edge *edge) {
+	vec3 newVertexPosition(computeNewVertexPositionForEdgeCollapse(edge));
+
+	Vertex *startVertex = edge->start;
+	startVertex->position = newVertexPosition;
+	startVertex->quadric += edge->end->quadric;
+
+	W_edge *leftNext = edge->left_next;
+	W_edge *rightNext = edge->right_next;
+	W_edge *leftPrev = edge->left_prev;
+	W_edge *rightPrev = edge->right_prev;
+
+	// Update vertex references
+	W_edge *e = leftNext;
+	while (e != rightNext) {
+		if (e->start == edge->end || e->start == edge->start) {
+			e = e->right_prev;
+		} else {
+			e = e->left_next;
+		}
+
+		if (e->start == edge->end) {
+			e->start = edge->start;
+		} else {
+			e->end = edge->start;
+		}
+	}
+
+	// Update edge references
+	if (leftNext->left == edge->left) {
+		if (leftPrev->left == edge->left) {
+			leftPrev->left_next = leftNext->right_prev;
+			leftPrev->left_prev = leftNext->right_next;
+		} else {
+			leftPrev->right_prev = leftNext->right_prev;
+			leftPrev->right_next = leftNext->right_next;
+		}
+
+		if (leftNext->right_prev->right_next == leftNext) {
+			leftNext->right_prev->right_next = leftPrev;
+		} else {
+			leftNext->right_prev->left_prev = leftPrev;
+		}
+
+		if (leftNext->right_next->right_prev == leftNext) {
+			leftNext->right_next->right_prev = leftPrev;
+		} else {
+			leftNext->right_next->left_next = leftPrev;
+		}
+	} else {
+		if (leftPrev->left == edge->left) {
+			leftPrev->left_next = leftNext->left_next;
+			leftPrev->left_prev = leftNext->left_prev;
+		} else {
+			leftPrev->right_prev = leftNext->left_next;
+			leftPrev->right_next = leftNext->left_prev;
+		}
+
+		if (leftNext->left_next->left_prev == leftNext) {
+			leftNext->left_next->left_prev = leftPrev;
+		} else {
+			leftNext->left_next->right_next = leftPrev;
+		}
+
+		if (leftNext->left_prev->left_next == leftNext) {
+			leftNext->left_prev->left_next = leftPrev;
+		} else {
+			leftNext->left_prev->right_prev = leftPrev;
+		}
+	}
+
+	if (rightNext->left == edge->right) {
+		if (rightPrev->left == edge->right) {
+			rightPrev->left_next = rightNext->right_prev;
+			rightPrev->left_prev = rightNext->right_next;
+		} else {
+			rightPrev->right_prev = rightNext->right_prev;
+			rightPrev->right_next = rightNext->right_next;
+		}
+
+		if (rightNext->right_prev->right_next == rightNext) {
+			rightNext->right_prev->right_next = rightPrev;
+		} else {
+			rightNext->right_prev->left_prev = rightPrev;
+		}
+
+		if (rightNext->right_next->right_prev == rightNext) {
+			rightNext->right_next->right_prev = rightPrev;
+		} else {
+			rightNext->right_next->left_next = rightPrev;
+		}
+	} else {
+		if (rightPrev->left == edge->right) {
+			rightPrev->left_next = rightNext->left_next;
+			rightPrev->left_prev = rightNext->left_prev;
+		} else {
+			rightPrev->right_prev = rightNext->left_next;
+			rightPrev->right_next = rightNext->left_prev;
+		}
+
+		if (rightNext->left_next->left_prev == rightNext) {
+			rightNext->left_next->left_prev = rightPrev;
+		} else {
+			rightNext->left_next->right_next = rightPrev;
+		}
+
+		if (rightNext->left_prev->left_next == rightNext) {
+			rightNext->left_prev->left_next = rightPrev;
+		} else {
+			rightNext->left_prev->right_prev = rightPrev;
+		}
+	}
+
+	// Update face and edge references
+	if (leftNext->left == edge->left) {
+		if (leftPrev->left == edge->left) {
+			leftPrev->left = leftNext->right;
+		} else {
+			leftPrev->right = leftNext->right;
+		}
+		leftNext->right->edge = leftPrev;
+	} else {
+		if (leftPrev->left == edge->left) {
+			leftPrev->left = leftNext->left;
+		} else {
+			leftPrev->right = leftNext->left;
+		}
+		leftNext->left->edge = leftPrev;
+	}
+
+	if (rightNext->left == edge->right) {
+		if (rightPrev->left == edge->right) {
+			rightPrev->left = rightNext->right;
+		} else {
+			rightPrev->right = rightNext->right;
+		}
+		rightNext->right->edge = rightPrev;
+	} else {
+		if (rightPrev->left == edge->right) {
+			rightPrev->left = rightNext->left;
+		} else {
+			rightPrev->right = rightNext->left;
+		}
+		rightNext->left->edge = rightPrev;
+	}
+
+	// Update edge reference for start vertex
+	edge->start->edge = leftPrev;
+	if (leftNext->left == edge->left) {
+		leftNext->end->edge = leftPrev;
+	} else {
+		leftNext->start->edge = leftPrev;
+	}
+
+	if (rightNext->left == edge->right) {
+		rightNext->start->edge = rightPrev;
+	} else {
+		rightNext->end->edge = rightPrev;
+	}
+
+	deleteVertex(edge->end);
+	deleteFace(edge->left);
+	deleteFace(edge->right);
+	deleteEdge(edge);
+	deleteEdge(leftNext);
+	deleteEdge(rightNext);
+}
+
+void Mesh::decimate (int k, int n) {
+	for(int i = 0; i < n; i++) {
+		W_edge *edge = getCandidateEdgeToCollapse(k);
+
+		while (canCauseNonManifoldMesh(edge) || canCauseFoldOver(edge)) {
+			edge = getCandidateEdgeToCollapse(k);
+		}
+
+		collapseEdge(edge);
+	}
 }

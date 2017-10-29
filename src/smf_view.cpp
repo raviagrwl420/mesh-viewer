@@ -14,7 +14,7 @@ using std::shared_ptr;
 using std::array;
 
 enum DisplayType {FLAT_SHADED, SMOOTH_SHADED, WIREFRAME, SHADED_WITH_EDGES};
-enum Buttons {ROTATION, OPEN, SAVE, QUIT, SUBDIVIDE};
+enum Buttons {ROTATION, OPEN, SAVE, QUIT, SUBDIVIDE, DECIMATE};
 
 Mesh *mesh;
 
@@ -32,6 +32,10 @@ float obj_pos[] = {0.0, 0.0, 0.0};
 // Subdivision
 int subdivisionType = BUTTERFLY;
 int subdivisionLevel = 1;
+
+// Decimation
+int decimationK = 1;
+int decimationNumber = 1;
 
 // GLUT idle function
 void glutIdle (void) {
@@ -113,11 +117,20 @@ void displayWireframe (void) {
 	for (map<string, W_edge*>::const_iterator it = mesh->edgeMap.begin(); it != mesh->edgeMap.end(); it++) {
 		edge = it->second;
 
+		if (edge == NULL) {
+			std::cout << "First!!::" << it->first << std::endl;
+			std::cout << "edge:" << edge << std::endl;
+			std::cout << "edge index:" << mesh->edgeIndexMap[edge] << std::endl;
+			std::cout << "edge key:" << mesh->edgeKeyMap[mesh->edgeIndexMap[edge]] << std::endl;
+		}
+		
+
 		vec3 startPosition = edge->start->position;
 		vec3 endPosition = edge->end->position;
 
 		glVertex3f(startPosition.x, startPosition.y, startPosition.z);
 		glVertex3f(endPosition.x, endPosition.y, endPosition.z);
+
 	}
 
 	glEnd();
@@ -225,6 +238,13 @@ void subdivision_cb (int control) {
 	mesh = mesh->subdivideMesh(subdivisionType, subdivisionLevel);
 }
 
+void decimation_cb (int control) {
+	if (mesh == NULL)
+		return;
+
+	mesh->decimate(decimationK, decimationNumber);
+}
+
 // Setup GLUI
 void setupGlui () {
 	// Initialize GLUI subwindow
@@ -237,6 +257,7 @@ void setupGlui () {
 	// Add Panel "Display Options"
 	GLUI_Panel *displayOptionsPanel = glui->add_panel("Display Options");
 	GLUI_Panel *subdivisionPanel = glui->add_panel("Subdivision");
+	GLUI_Panel *decimationPanel = glui->add_panel("Decimate");
 	GLUI_Panel *transformationsPanel = glui->add_panel("Transformations");
 	GLUI_Panel *controlsPanel = glui->add_panel("Controls");
 
@@ -258,6 +279,17 @@ void setupGlui () {
   	subdivision_level_spinner->set_alignment(GLUI_ALIGN_RIGHT);
 
   	glui->add_button_to_panel(subdivisionPanel, "start", SUBDIVIDE, subdivision_cb);
+
+  	// Decimation
+	GLUI_Spinner *decimation_k_spinner = new GLUI_Spinner(decimationPanel, "k:", &decimationK);
+	decimation_k_spinner->set_int_limits(1, 500);
+	decimation_k_spinner->set_alignment(GLUI_ALIGN_RIGHT);
+
+	GLUI_Spinner *decimation_number_spinner = new GLUI_Spinner(decimationPanel, "Number:", &decimationNumber);
+	decimation_number_spinner->set_int_limits(1, 2000);
+	decimation_number_spinner->set_alignment(GLUI_ALIGN_RIGHT);
+
+	glui->add_button_to_panel(decimationPanel, "start", DECIMATE, decimation_cb);
 
 	// Add Scale Spinner
 	GLUI_Spinner *scale_spinner = new GLUI_Spinner(transformationsPanel, "Scale:", &scale);

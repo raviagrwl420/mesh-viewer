@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <glm/glm.hpp>
+#include <random>
 
 #define PI 3.14159265
 
@@ -12,9 +13,16 @@ using std::to_string;
 
 using std::map;
 using std::make_pair;
+using std::vector;
 
 using glm::vec3;
+using glm::vec4;
+using glm::normalize;
 using glm::cross;
+using glm::dot;
+
+using glm::mat4;
+using glm::outerProduct;
 
 // Subdivision Types
 enum SubdivisionType {BUTTERFLY, LOOP};
@@ -35,6 +43,7 @@ struct W_edge {
 struct Vertex {
 	vec3 position;
 	vec3 normal;
+	mat4 quadric;
 
 	struct W_edge *edge;
 	
@@ -51,8 +60,10 @@ struct Face {
 
 // Mesh
 struct Mesh {
-	int numVertices, numFaces;
+	int numVertices, numEdges, numFaces;
 	map<string, W_edge*> edgeMap;
+	map<int, string> edgeKeyMap;
+	map<W_edge*, int> edgeIndexMap;
 	map<int, Vertex*> vertexMap;
 	map<int, Face*> faceMap;
 	map<Vertex*, int> vertexIndexMap;
@@ -68,9 +79,15 @@ struct Mesh {
 
 	Vertex *insertVertex (Vertex *vertex);
 
+	void deleteVertex (Vertex *vertex);
+
 	W_edge *insertEdge (int v1, int v2);
 
+	void deleteEdge (W_edge *edge);
+
 	Face *insertFace (W_edge *edge);
+
+	void deleteFace (Face *face);
 
 	void insertTriangle (int v1, int v2, int v3);
 
@@ -96,6 +113,26 @@ struct Mesh {
 	Mesh *butterflySubdivision ();
 
 	Mesh *subdivideMesh (int subdivisionType, int subdivisionLevel);
+
+	// Decimation
+
+	mat4 getQuadric (Face *f, Vertex *v);
+
+	void updateQuadricForVertex (Face *f, int v1);
+
+	void updateQuadricForEachVertex (Face *f, int v1, int v2, int v3);
+
+	vec4 computeNewVertexPositionForEdgeCollapse(W_edge *edge);
+
+	W_edge *getCandidateEdgeToCollapse (int k);
+
+	bool canCauseFoldOver (W_edge *edge);
+	
+	bool canCauseNonManifoldMesh (W_edge *edge);
+
+	void collapseEdge (W_edge *edge);
+
+	void decimate (int k, int n);
 };
 
 string getEdgeKey (int v1, int v2);
