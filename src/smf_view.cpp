@@ -57,13 +57,14 @@ void displayFlatShaded (void) {
 	
 	Face *f;
 	Vertex *vertices[3];
-	Vector *faceNormal;
+
+	vec3 faceNormal;
 
 	for (int i = 1; i <= mesh->numFaces; i++) {
 		f = mesh->faceMap[i];
 
 		faceNormal = mesh->getFaceNormal(f);
-		glNormal3f(faceNormal->x, faceNormal->y, faceNormal->z);
+		glNormal3f(faceNormal.x, faceNormal.y, faceNormal.z);
 
 		mesh->getAllVerticesForFace(f, vertices);
 
@@ -84,7 +85,7 @@ void displaySmoothShaded (void) {
 	
 	Face *f;
 	Vertex *vertices[3];
-	Vector *vertexNormal;
+	vec3 vertexNormal;
 
 	for (int i = 1; i <= mesh->numFaces; i++) {
 		f = mesh->faceMap[i];
@@ -93,7 +94,7 @@ void displaySmoothShaded (void) {
 
 		for (int j = 0; j < 3; j++) {
 			vertexNormal = vertices[j]->normal;
-			glNormal3f(vertexNormal->x, vertexNormal->y, vertexNormal->z);
+			glNormal3f(vertexNormal.x, vertexNormal.y, vertexNormal.z);
 
 			vec3 position = vertices[j]->position;
 			glVertex3f(position.x, position.y, position.z);

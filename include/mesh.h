@@ -1,7 +1,6 @@
 #ifndef MESH_H
 #define MESH_H
 
-#include <vector.h>
 #include <map>
 #include <string>
 #include <glm/glm.hpp>
@@ -15,6 +14,7 @@ using std::map;
 using std::make_pair;
 
 using glm::vec3;
+using glm::cross;
 
 // Subdivision Types
 enum SubdivisionType {BUTTERFLY, LOOP};
@@ -34,9 +34,9 @@ struct W_edge {
 // Vertex
 struct Vertex {
 	vec3 position;
+	vec3 normal;
+
 	struct W_edge *edge;
-	struct Vector *vector;
-	struct Vector *normal;
 	
 	Vertex (float x, float y, float z);
 };
@@ -56,7 +56,7 @@ struct Mesh {
 	map<int, Face*> faceMap;
 	map<Vertex*, int> vertexIndexMap;
 	map<Face*, int> faceIndexMap;
-	map<string, Vector*> faceNormalMap;
+	map<string, vec3> faceNormalMap;
 	float xMin, yMin, zMin, xMax, yMax, zMax;
 
 	Mesh () {};
@@ -81,7 +81,7 @@ struct Mesh {
 
 	W_edge *getEdge (int v1, int v2);
 	
-	Vector *getFaceNormal (Face *f);
+	vec3 getFaceNormal (Face *f);
 
 	void getAllEdgesForFace (Face *f, W_edge *edges[3]);
 
@@ -99,7 +99,7 @@ struct Mesh {
 
 string getEdgeKey (int v1, int v2);
 
-Vector *getFaceNormalVector (Vertex *v1, Vertex *v2, Vertex *v3);
+vec3 getFaceNormalVector (Vertex *v1, Vertex *v2, Vertex *v3);
 
 Vertex *getNextVertex (W_edge *edge, W_edge *next_edge);
 

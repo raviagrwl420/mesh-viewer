@@ -3,8 +3,7 @@
 // Vertex Constructor
 Vertex::Vertex (float x, float y, float z) {
 	this->position = vec3(x, y, z);
-	this->vector = new Vector(x, y, z);
-	this->normal = new Vector(0.0, 0.0, 0.0);
+	this->normal = vec3(0.0, 0.0, 0.0);
 }
 
 void Mesh::computeBoundingBox () {
@@ -162,15 +161,14 @@ void Mesh::insertTriangle (int v1, int v2, int v3) {
 
 // Insert the face normal for vertex v1
 void Mesh::insertFaceNormal (Face *f, int v1, int v2, int v3) {
-	Vector *faceNormal = getFaceNormalVector(vertexMap[v1], vertexMap[v2], vertexMap[v3]);
+	vec3 faceNormal = getFaceNormalVector(vertexMap[v1], vertexMap[v2], vertexMap[v3]);
 	faceNormalMap.insert(make_pair(to_string(faceIndexMap[f]), faceNormal));
 }
 
 // Update the vertex normal for vertex v by adding the face normal
 void Mesh::updateVertexNormalForVertex (Face *f, int v) {
 	Vertex *vertex = vertexMap[v];
-	Vector *faceNormal = getFaceNormal(f);
-	vertex->normal = *(vertex->normal) + *faceNormal;
+	vertex->normal = vertex->normal + getFaceNormal(f);
 }
 
 // Update the vertex normal for each vertex v1, v2, and v3
@@ -191,13 +189,11 @@ W_edge *Mesh::getEdge (int v1, int v2) {
 }
 
 // Fetch the face normal for vertex
-Vector *Mesh::getFaceNormal (Face *f) {
-	map<string, Vector*>::iterator it = faceNormalMap.find(to_string(faceIndexMap[f]));
+vec3 Mesh::getFaceNormal (Face *f) {
+	map<string, vec3>::iterator it = faceNormalMap.find(to_string(faceIndexMap[f]));
 
 	if (it != faceNormalMap.end())
 		return it->second;
-	else
-		return NULL;
 }
 
 // Get all edges for a face
@@ -238,11 +234,11 @@ string getEdgeKey (int v1, int v2) {
 }
 
 // Get the face normal from the first vertex
-Vector *getFaceNormalVector (Vertex *v1, Vertex *v2, Vertex *v3) {
-	Vector *e1 = *v2->vector - *v1->vector;
-	Vector *e2 = *v3->vector - *v1->vector;
+vec3 getFaceNormalVector (Vertex *v1, Vertex *v2, Vertex *v3) {
+	vec3 e1 = v2->position - v1->position;
+	vec3 e2 = v3->position - v1->position;
 
-	return cross(*e1, *e2);
+	return cross(e1, e2);
 }
 
 // Get next vertex
@@ -261,12 +257,12 @@ Vertex *computeMidpoint (W_edge *edge) {
 	Vertex *left_vertex = getNextVertex(edge, edge->left_next);
 	Vertex *right_vertex = getNextVertex(edge, edge->right_next);
 
-	Vector *newVertexPosition = edge->start->vector->scalar_mult(3.0/8.0);
-	newVertexPosition = *newVertexPosition + *edge->end->vector->scalar_mult(3.0/8.0);
-	newVertexPosition = *newVertexPosition + *left_vertex->vector->scalar_mult(1.0/8.0);
-	newVertexPosition = *newVertexPosition + *right_vertex->vector->scalar_mult(1.0/8.0);
+	vec3 newVertexPosition = edge->start->position * (3.0f/8.0f);
+	newVertexPosition += edge->end->position * (3.0f/8.0f);
+	newVertexPosition += left_vertex->position * (1.0f/8.0f);
+	newVertexPosition += right_vertex->position * (1.0f/8.0f);
 
-	return new Vertex(newVertexPosition->x, newVertexPosition->y, newVertexPosition->z);
+	return new Vertex(newVertexPosition.x, newVertexPosition.y, newVertexPosition.z);
 }
 
 // Get the degree of a vertex
@@ -300,7 +296,7 @@ Vertex *computeNewVertex (Vertex *vertex) {
 	int k = getDegreeOfVertex(vertex);
 	float beta = computeBeta(k);
 
-	Vector *newVertexPosition = vertex->vector->scalar_mult(1 - k*beta);
+	vec3 newVertexPosition = vertex->position * (1.0f - k*beta);
 
 	Vertex *nextVertex;
 	W_edge *e = vertex->edge;
@@ -313,10 +309,10 @@ Vertex *computeNewVertex (Vertex *vertex) {
 			e = e->right_next;
 		}
 
-		newVertexPosition = *newVertexPosition + *nextVertex->vector->scalar_mult(beta);
+		newVertexPosition += nextVertex->position * beta;
 	}
 
-	return new Vertex(newVertexPosition->x, newVertexPosition->y, newVertexPosition->z);
+	return new Vertex(newVertexPosition.x, newVertexPosition.y, newVertexPosition.z);
 }
 
 // Perform Loop subdivision
@@ -413,7 +409,8 @@ Vertex *computeNewVertexAroundIrregularVertex (W_edge *edge, Vertex *vertex) {
 	Vertex *otherVertex = getOtherVertex(edge, vertex);
 	float s0weight = computeButterflyWeight(k, 0);
 	total_weights += s0weight;
-	Vector *newVertexPosition = otherVertex->vector->scalar_mult(s0weight);
+
+	vec3 newVertexPosition = otherVertex->position * s0weight;
 
 	Vertex *nextVertex;
 	W_edge *e = edge;
@@ -429,12 +426,12 @@ Vertex *computeNewVertexAroundIrregularVertex (W_edge *edge, Vertex *vertex) {
 			e = e->right_next;
 		}
 
-		newVertexPosition = *newVertexPosition + *nextVertex->vector->scalar_mult(s);
+		newVertexPosition += nextVertex->position * s;
 	}
 
-	newVertexPosition = *newVertexPosition + *vertex->vector->scalar_mult(1 - total_weights);
+	newVertexPosition += vertex->position * (1 - total_weights);
 
-	return new Vertex(newVertexPosition->x, newVertexPosition->y, newVertexPosition->z);
+	return new Vertex(newVertexPosition.x, newVertexPosition.y, newVertexPosition.z);
 }
 
 // Helper method to get a butterfly vertex
@@ -460,7 +457,7 @@ Vertex *computeMidpointButterfly (W_edge *edge) {
 	bool isStartVertexRegular = isRegular(edge->start);
 	bool isEndVertexRegular = isRegular(edge->end);
 
-	Vector *newVertexPosition;
+	vec3 newVertexPosition;
 	if (isStartVertexRegular && isEndVertexRegular) {
 		Vertex *left_vertex = getNextVertex(edge, edge->left_next);
 		Vertex *right_vertex = getNextVertex(edge, edge->right_next);
@@ -468,13 +465,13 @@ Vertex *computeMidpointButterfly (W_edge *edge) {
 
 		getButterflyVertices(edge, butterflyVertices);
 
-		newVertexPosition = edge->start->vector->scalar_mult(1.0/2.0);
-		newVertexPosition = *newVertexPosition + *edge->end->vector->scalar_mult(1.0/2.0);
-		newVertexPosition = *newVertexPosition + *left_vertex->vector->scalar_mult(1.0/8.0);
-		newVertexPosition = *newVertexPosition + *right_vertex->vector->scalar_mult(1.0/8.0);
+		newVertexPosition += edge->start->position * (1.0f/2.0f);
+		newVertexPosition += edge->end->position * (1.0f/2.0f);
+		newVertexPosition += left_vertex->position * (1.0f/8.0f);
+		newVertexPosition += right_vertex->position * (1.0f/8.0f);
 
 		for (int i = 0; i < 4; i++) {
-			newVertexPosition = *newVertexPosition + *butterflyVertices[i]->vector->scalar_mult(-1.0/16.0);
+			newVertexPosition += butterflyVertices[i]->position * (-1.0f/16.0f);
 		}
 	} else {
 		if (isStartVertexRegular)
@@ -484,11 +481,11 @@ Vertex *computeMidpointButterfly (W_edge *edge) {
 		else {
 			Vertex *v1 = computeNewVertexAroundIrregularVertex(edge, edge->start);
 			Vertex *v2 = computeNewVertexAroundIrregularVertex(edge, edge->end);
-			newVertexPosition = *v1->vector->scalar_mult(1.0/2.0) + *v2->vector->scalar_mult(1.0/2.0);
+			newVertexPosition = v1->position * (1.0f/2.0f) + v2->position * (1.0f/2.0f);
 		}
 	}
 
-	return new Vertex(newVertexPosition->x, newVertexPosition->y, newVertexPosition->z);
+	return new Vertex(newVertexPosition.x, newVertexPosition.y, newVertexPosition.z);
 }
 
 // Perform Butterfly subdivision
