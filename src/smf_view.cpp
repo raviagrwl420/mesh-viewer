@@ -66,9 +66,11 @@ void displayFlatShaded (void) {
 		glNormal3f(faceNormal->x, faceNormal->y, faceNormal->z);
 
 		mesh->getAllVerticesForFace(f, vertices);
-		glVertex3f(vertices[0]->x, vertices[0]->y, vertices[0]->z);
-		glVertex3f(vertices[1]->x, vertices[1]->y, vertices[1]->z);
-		glVertex3f(vertices[2]->x, vertices[2]->y, vertices[2]->z);
+
+		for (int j = 0; j < 3; j++) {
+			vec3 position = vertices[j]->position;
+			glVertex3f(position.x, position.y, position.z);
+		}
 	}
 
 	glEnd();
@@ -92,7 +94,9 @@ void displaySmoothShaded (void) {
 		for (int j = 0; j < 3; j++) {
 			vertexNormal = vertices[j]->normal;
 			glNormal3f(vertexNormal->x, vertexNormal->y, vertexNormal->z);
-			glVertex3f(vertices[j]->x, vertices[j]->y, vertices[j]->z);
+
+			vec3 position = vertices[j]->position;
+			glVertex3f(position.x, position.y, position.z);
 		}
 	}
 
@@ -107,8 +111,12 @@ void displayWireframe (void) {
 
 	for (map<string, W_edge*>::const_iterator it = mesh->edgeMap.begin(); it != mesh->edgeMap.end(); it++) {
 		edge = it->second;
-		glVertex3f(edge->start->x, edge->start->y, edge->start->z);
-		glVertex3f(edge->end->x, edge->end->y, edge->end->z);
+
+		vec3 startPosition = edge->start->position;
+		vec3 endPosition = edge->end->position;
+
+		glVertex3f(startPosition.x, startPosition.y, startPosition.z);
+		glVertex3f(endPosition.x, endPosition.y, endPosition.z);
 	}
 
 	glEnd();

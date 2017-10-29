@@ -4,6 +4,7 @@
 #include <vector.h>
 #include <map>
 #include <string>
+#include <glm/glm.hpp>
 
 #define PI 3.14159265
 
@@ -12,6 +13,8 @@ using std::to_string;
 
 using std::map;
 using std::make_pair;
+
+using glm::vec3;
 
 // Subdivision Types
 enum SubdivisionType {BUTTERFLY, LOOP};
@@ -30,7 +33,7 @@ struct W_edge {
 
 // Vertex
 struct Vertex {
-	float x, y, z;
+	vec3 position;
 	struct W_edge *edge;
 	struct Vector *vector;
 	struct Vector *normal;

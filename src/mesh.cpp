@@ -2,22 +2,22 @@
 
 // Vertex Constructor
 Vertex::Vertex (float x, float y, float z) {
-	this->x = x;
-	this->y = y;
-	this->z = z;
+	this->position = vec3(x, y, z);
 	this->vector = new Vector(x, y, z);
 	this->normal = new Vector(0.0, 0.0, 0.0);
 }
 
 void Mesh::computeBoundingBox () {
-	xMin = xMax = vertexMap[1]->x;
-	yMin = yMax = vertexMap[1]->y;
-	zMin = zMax = vertexMap[1]->z;
+	vec3 position = vertexMap[1]->position;
+	xMin = xMax = position.x;
+	yMin = yMax = position.y;
+	zMin = zMax = position.z;
 
 	for (int i = 1; i <= numVertices; i++) {
-		float xVal = vertexMap[i]->x;
-		float yVal = vertexMap[i]->y;
-		float zVal = vertexMap[i]->z;
+		vec3 position = vertexMap[i]->position;
+		float xVal = position.x;
+		float yVal = position.y;
+		float zVal = position.z;
 		
 		if (xVal < xMin)
 			xMin = xVal;

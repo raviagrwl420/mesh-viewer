@@ -56,7 +56,8 @@ void writeSmfFile (Mesh *mesh, string filename) {
 	
 	for (int i = 1; i <= mesh->numVertices; i++) {
 		Vertex *vertex = mesh->vertexMap[i];
-		smf_file << "v " << vertex->x << " " << vertex->y << " " << vertex->z << endl;
+		vec3 position = vertex->position;
+		smf_file << "v " << position.x << " " << position.y << " " << position.z << endl;
 	}
 
 	for (int i = 1; i <= mesh->numFaces; i++) {
