@@ -39,6 +39,7 @@ struct Vertex {
 	struct W_edge *edge;
 	
 	Vertex (float x, float y, float z);
+	Vertex (vec3 position);
 };
 
 // Face

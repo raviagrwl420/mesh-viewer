@@ -6,6 +6,12 @@ Vertex::Vertex (float x, float y, float z) {
 	this->normal = vec3(0.0, 0.0, 0.0);
 }
 
+// Vertex Constructor
+Vertex::Vertex (vec3 position) {
+	this->position = position;
+	this->normal = vec3(0.0, 0.0, 0.0);
+}
+
 void Mesh::computeBoundingBox () {
 	vec3 position = vertexMap[1]->position;
 	xMin = xMax = position.x;
@@ -262,7 +268,7 @@ Vertex *computeMidpoint (W_edge *edge) {
 	newVertexPosition += left_vertex->position * (1.0f/8.0f);
 	newVertexPosition += right_vertex->position * (1.0f/8.0f);
 
-	return new Vertex(newVertexPosition.x, newVertexPosition.y, newVertexPosition.z);
+	return new Vertex(newVertexPosition);
 }
 
 // Get the degree of a vertex
@@ -312,7 +318,7 @@ Vertex *computeNewVertex (Vertex *vertex) {
 		newVertexPosition += nextVertex->position * beta;
 	}
 
-	return new Vertex(newVertexPosition.x, newVertexPosition.y, newVertexPosition.z);
+	return new Vertex(newVertexPosition);
 }
 
 // Perform Loop subdivision
@@ -431,7 +437,7 @@ Vertex *computeNewVertexAroundIrregularVertex (W_edge *edge, Vertex *vertex) {
 
 	newVertexPosition += vertex->position * (1 - total_weights);
 
-	return new Vertex(newVertexPosition.x, newVertexPosition.y, newVertexPosition.z);
+	return new Vertex(newVertexPosition);
 }
 
 // Helper method to get a butterfly vertex
@@ -485,7 +491,7 @@ Vertex *computeMidpointButterfly (W_edge *edge) {
 		}
 	}
 
-	return new Vertex(newVertexPosition.x, newVertexPosition.y, newVertexPosition.z);
+	return new Vertex(newVertexPosition);
 }
 
 // Perform Butterfly subdivision
