@@ -282,11 +282,11 @@ void setupGlui () {
 
   	// Decimation
 	GLUI_Spinner *decimation_k_spinner = new GLUI_Spinner(decimationPanel, "k:", &decimationK);
-	decimation_k_spinner->set_int_limits(1, 500);
+	decimation_k_spinner->set_int_limits(1, 1000);
 	decimation_k_spinner->set_alignment(GLUI_ALIGN_RIGHT);
 
 	GLUI_Spinner *decimation_number_spinner = new GLUI_Spinner(decimationPanel, "Number:", &decimationNumber);
-	decimation_number_spinner->set_int_limits(1, 2000);
+	decimation_number_spinner->set_int_limits(1, 20000);
 	decimation_number_spinner->set_alignment(GLUI_ALIGN_RIGHT);
 
 	glui->add_button_to_panel(decimationPanel, "start", DECIMATE, decimation_cb);

@@ -13,7 +13,6 @@ using std::to_string;
 
 using std::map;
 using std::make_pair;
-using std::vector;
 
 using glm::vec3;
 using glm::vec4;
@@ -124,7 +123,7 @@ struct Mesh {
 
 	vec4 computeNewVertexPositionForEdgeCollapse(W_edge *edge);
 
-	W_edge *getCandidateEdgeToCollapse (int k);
+	W_edge *getCandidateEdgeToCollapse (int k, map<W_edge*, bool> flagged);
 
 	bool canCauseFoldOver (W_edge *edge);
 	

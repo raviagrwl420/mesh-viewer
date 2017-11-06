@@ -672,7 +672,7 @@ float getError (W_edge *edge, vec4 p) {
 	return dot(p*Q, p); 	
 }
 
-W_edge *Mesh::getCandidateEdgeToCollapse (int k) {
+W_edge *Mesh::getCandidateEdgeToCollapse (int k, map<W_edge*, bool> flagged) {
 	std::random_device rd;  //Will be used to obtain a seed for the random number engine
 	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
 	std::uniform_int_distribution<> dis(1, numEdges);
@@ -681,10 +681,12 @@ W_edge *Mesh::getCandidateEdgeToCollapse (int k) {
 	W_edge *candidateEdge;
 
 	for(int i = 0; i < k; i++) {
-		int edgeIndex = dis(gen);
-
-		string edgeKey = edgeKeyMap[edgeIndex];
-		W_edge *edge = edgeMap[edgeKey];
+		W_edge *edge;
+		do {
+			int edgeIndex = dis(gen);
+			string edgeKey = edgeKeyMap[edgeIndex];
+			edge = edgeMap[edgeKey];
+		} while (flagged[edge]);
 
 		vec4 newVertexPosition = computeNewVertexPositionForEdgeCollapse(edge);
 
@@ -747,10 +749,9 @@ bool Mesh::canCauseFoldOver (W_edge *edge) {
 }
 
 bool Mesh::canCauseNonManifoldMesh (W_edge *edge) {
-	Vertex *leftOther = getNextVertex(edge, edge->left_next);
-	Vertex *rightOther = getNextVertex(edge, edge->right_next);
-	return getDegreeOfVertex(edge->start) == 3 || getDegreeOfVertex(edge->end) == 3 ||
-		getDegreeOfVertex(leftOther) == 3 || getDegreeOfVertex(rightOther) == 3;
+	Vertex *leftNext = getNextVertex(edge, edge->left_next);
+	Vertex *rightNext = getNextVertex(edge, edge->right_next);
+	return getDegreeOfVertex(leftNext) == 3 || getDegreeOfVertex(rightNext) == 3;
 }
 
 void Mesh::collapseEdge (W_edge *edge) {
@@ -922,11 +923,14 @@ void Mesh::collapseEdge (W_edge *edge) {
 }
 
 void Mesh::decimate (int k, int n) {
+	map<W_edge*, bool> flagged;
+
 	for(int i = 0; i < n; i++) {
-		W_edge *edge = getCandidateEdgeToCollapse(k);
+		W_edge *edge = getCandidateEdgeToCollapse(k, flagged);
 
 		while (canCauseNonManifoldMesh(edge) || canCauseFoldOver(edge)) {
-			edge = getCandidateEdgeToCollapse(k);
+			flagged[edge] = true;
+			edge = getCandidateEdgeToCollapse(k, flagged);
 		}
 
 		collapseEdge(edge);
