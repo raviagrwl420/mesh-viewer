@@ -14,6 +14,7 @@ Vertex::Vertex (vec3 position) {
 	this->quadric = mat4(0.0);
 }
 
+// Compute Bounding Box
 void Mesh::computeBoundingBox () {
 	vec3 position = vertexMap[1]->position;
 	xMin = xMax = position.x;
@@ -632,6 +633,7 @@ Mesh *Mesh::subdivideMesh (int subdivisionType, int subdivisionLevel) {
 
 // Decimate a mesh
 
+// Compute Quadric for a face
 mat4 Mesh::getQuadric (Face *f, Vertex *v) {
 	vec3 faceNormal = getFaceNormal(f);
 	vec3 vertexPosition = v->position;
@@ -643,17 +645,20 @@ mat4 Mesh::getQuadric (Face *f, Vertex *v) {
 	return outerProduct(p, p);
 }
 
+// Update the vertex Quadric for vertex v1 by adding the face Quadric
 void Mesh::updateQuadricForVertex (Face *f, int v1) {
 	Vertex *vertex = vertexMap[v1];
 	vertex->quadric += getQuadric(f, vertex);
 }
 
+// Update the vertex Quadric for each vertex v1, v2 and v3
 void Mesh::updateQuadricForEachVertex (Face *f, int v1, int v2, int v3) {
 	updateQuadricForVertex(f, v1);
 	updateQuadricForVertex(f, v2);
 	updateQuadricForVertex(f, v3);
 }
 
+// Inner Optimization: Compute the new vertex position for an edge collapse
 vec4 Mesh::computeNewVertexPositionForEdgeCollapse (W_edge *edge) {
 	mat4 quadric = edge->start->quadric + edge->end->quadric;
 
@@ -667,13 +672,15 @@ vec4 Mesh::computeNewVertexPositionForEdgeCollapse (W_edge *edge) {
 	return inverse(quadric) * vec;
 }
 
+// Compute the error for the new vertex position
 float getError (W_edge *edge, vec4 p) {
 	mat4 Q = edge->start->quadric + edge->end->quadric;
 	return dot(p*Q, p); 	
 }
 
+// Get a candidate edge to collapse among k randomly selected edges
 W_edge *Mesh::getCandidateEdgeToCollapse (int k, map<W_edge*, bool> flagged) {
-	std::random_device rd;  //Will be used to obtain a seed for the random number engine
+	std::random_device rd; //Will be used to obtain a seed for the random number engine
 	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
 	std::uniform_int_distribution<> dis(1, numEdges);
 
@@ -686,7 +693,7 @@ W_edge *Mesh::getCandidateEdgeToCollapse (int k, map<W_edge*, bool> flagged) {
 			int edgeIndex = dis(gen);
 			string edgeKey = edgeKeyMap[edgeIndex];
 			edge = edgeMap[edgeKey];
-		} while (flagged[edge]);
+		} while (flagged[edge]); // Select a new edge if the edge is flagged
 
 		vec4 newVertexPosition = computeNewVertexPositionForEdgeCollapse(edge);
 
@@ -701,6 +708,7 @@ W_edge *Mesh::getCandidateEdgeToCollapse (int k, map<W_edge*, bool> flagged) {
 	return candidateEdge;
 }
 
+// Check if the edge collapse can cause a mesh foldover
 bool Mesh::canCauseFoldOver (W_edge *edge) {
 	vec3 newVertexPosition(computeNewVertexPositionForEdgeCollapse(edge));
 	Vertex *newVertex = new Vertex(newVertexPosition);
@@ -748,12 +756,14 @@ bool Mesh::canCauseFoldOver (W_edge *edge) {
 	return false;
 }
 
+// Check if the edge collapse can cause a non-manifold mesh
 bool Mesh::canCauseNonManifoldMesh (W_edge *edge) {
 	Vertex *leftNext = getNextVertex(edge, edge->left_next);
 	Vertex *rightNext = getNextVertex(edge, edge->right_next);
 	return getDegreeOfVertex(leftNext) == 3 || getDegreeOfVertex(rightNext) == 3;
 }
 
+// Collapse the edge
 void Mesh::collapseEdge (W_edge *edge) {
 	vec3 newVertexPosition(computeNewVertexPositionForEdgeCollapse(edge));
 
@@ -867,7 +877,7 @@ void Mesh::collapseEdge (W_edge *edge) {
 		}
 	}
 
-	// Update face and edge references
+	// Update face references and edge references for the faces
 	if (leftNext->left == edge->left) {
 		if (leftPrev->left == edge->left) {
 			leftPrev->left = leftNext->right;
@@ -900,7 +910,7 @@ void Mesh::collapseEdge (W_edge *edge) {
 		rightNext->left->edge = rightPrev;
 	}
 
-	// Update edge reference for start vertex
+	// Update edge reference for the vertices
 	edge->start->edge = leftPrev;
 	if (leftNext->left == edge->left) {
 		leftNext->end->edge = leftPrev;
@@ -922,6 +932,8 @@ void Mesh::collapseEdge (W_edge *edge) {
 	deleteEdge(rightNext);
 }
 
+// Decimate mesh by collapsing n edges
+// Select an edge collapse amongst k randomly chosen candidate edges which gives the least quadric error
 void Mesh::decimate (int k, int n) {
 	map<W_edge*, bool> flagged;
 
@@ -929,7 +941,7 @@ void Mesh::decimate (int k, int n) {
 		W_edge *edge = getCandidateEdgeToCollapse(k, flagged);
 
 		while (canCauseNonManifoldMesh(edge) || canCauseFoldOver(edge)) {
-			flagged[edge] = true;
+			flagged[edge] = true; // Flag edge if it cannot be collapsed
 			edge = getCandidateEdgeToCollapse(k, flagged);
 		}
 

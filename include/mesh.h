@@ -114,7 +114,6 @@ struct Mesh {
 	Mesh *subdivideMesh (int subdivisionType, int subdivisionLevel);
 
 	// Decimation
-
 	mat4 getQuadric (Face *f, Vertex *v);
 
 	void updateQuadricForVertex (Face *f, int v1);
