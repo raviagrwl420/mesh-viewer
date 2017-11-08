@@ -6,8 +6,8 @@
 #include <string>
 #include <array>
 
-#define WIDTH 1000
-#define HEIGHT 600
+#define WIDTH 1200
+#define HEIGHT 800
 
 using std::runtime_error;
 using std::shared_ptr;
@@ -257,7 +257,7 @@ void setupGlui () {
 	// Add Panel "Display Options"
 	GLUI_Panel *displayOptionsPanel = glui->add_panel("Display Options");
 	GLUI_Panel *subdivisionPanel = glui->add_panel("Subdivision");
-	GLUI_Panel *decimationPanel = glui->add_panel("Decimate");
+	GLUI_Panel *decimationPanel = glui->add_panel("Decimation");
 	GLUI_Panel *transformationsPanel = glui->add_panel("Transformations");
 	GLUI_Panel *controlsPanel = glui->add_panel("Controls");
 
@@ -278,18 +278,18 @@ void setupGlui () {
   	subdivision_level_spinner->set_int_limits(1, 5);
   	subdivision_level_spinner->set_alignment(GLUI_ALIGN_RIGHT);
 
-  	glui->add_button_to_panel(subdivisionPanel, "start", SUBDIVIDE, subdivision_cb);
+  	glui->add_button_to_panel(subdivisionPanel, "subdivide", SUBDIVIDE, subdivision_cb);
 
   	// Decimation
 	GLUI_Spinner *decimation_k_spinner = new GLUI_Spinner(decimationPanel, "k:", &decimationK);
-	decimation_k_spinner->set_int_limits(1, 1000);
+	decimation_k_spinner->set_int_limits(1, 20000);
 	decimation_k_spinner->set_alignment(GLUI_ALIGN_RIGHT);
 
-	GLUI_Spinner *decimation_number_spinner = new GLUI_Spinner(decimationPanel, "Number:", &decimationNumber);
+	GLUI_Spinner *decimation_number_spinner = new GLUI_Spinner(decimationPanel, "Edge Count:", &decimationNumber);
 	decimation_number_spinner->set_int_limits(1, 20000);
 	decimation_number_spinner->set_alignment(GLUI_ALIGN_RIGHT);
 
-	glui->add_button_to_panel(decimationPanel, "start", DECIMATE, decimation_cb);
+	glui->add_button_to_panel(decimationPanel, "decimate", DECIMATE, decimation_cb);
 
 	// Add Scale Spinner
 	GLUI_Spinner *scale_spinner = new GLUI_Spinner(transformationsPanel, "Scale:", &scale);
