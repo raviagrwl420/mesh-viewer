@@ -26,7 +26,7 @@ LIB := -lGL -lglut -lglui
 
 # Build Executable
 $(TARGET): $(OBJECTS)
-	$(CC) $^ -o $@ $(LIB)
+	$(CC) -fPIC $^ -o $@ $(LIB)
 
 # Build Object Files
 $(BUILDDIR)/%.o: $(SRCDIR)/%.$(SRCEXT)
